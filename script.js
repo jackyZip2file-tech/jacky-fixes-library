@@ -5,7 +5,56 @@ const isOwner = urlParams.get('admin') === 'jacky';
 
 // --- 2. THE DATA (Where games live for everyone) ---
 // When you "Export," you will paste the new list inside these brackets [ ]
-let officialGames = [];
+let officialGames = [
+  {
+    "title": "rv there yet ",
+    "url": "https://steamrip.com/rv-there-yet-free-download/",
+    "yt": "https://www.youtube.com/watch?v=Br8vAUbdhFI&t=1s&pp=ygUNcnYgdGhlcmUgeWV0IA%3D%3D",
+    "img": "https://gaming-cdn.com/images/products/20702/orig/rv-there-yet-pc-steam-cover.jpg?v=1761118646"
+  },
+  {
+    "title": "Repo",
+    "url": "https://steamrip.com/r-e-p-o-free-download/",
+    "yt": "https://youtu.be/AqhamuepAeE?si=acE8ghNYzmylJsP8",
+    "img": "https://i.ytimg.com/vi/IEhEymYkzRI/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLAAAfZjqO617nHrUEa_EW8HD_ZUfw"
+  },
+  {
+    "title": "content warning ",
+    "url": "https://steamrip.com/content-warning-free-download/",
+    "yt": "https://www.youtube.com/watch?v=iyif6sL3rXs&pp=ygUWY29udGVudCB3YXJuaW5nIG1lbWVzIA%3D%3D",
+    "img": "https://steamgg.net/wp-content/uploads/2024/04/Content-Warning-Free-Download-SteamGG-2-jpg.webp"
+  },
+  {
+    "title": "GWtool",
+    "url": "https://www.moddb.com/mods/garrys-mod/downloads/gwtool-file-made-by-zombieslayer103",
+    "yt": "https://www.youtube.com/watch?v=K99P9xMrZ-4",
+    "img": "https://media.moddb.com/images/downloads/1/179/178961/dcgp6gx-fc2b65c5-e07b-4371-b520-.png"
+  },
+  {
+    "title": "7z",
+    "url": "https://www.7-zip.org/",
+    "yt": "https://www.youtube.com/watch?v=K99P9xMrZ-4",
+    "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/7-Zip_Icon.svg/1200px-7-Zip_Icon.svg.png"
+  },
+  {
+    "title": "online fix Gmod download",
+    "url": "https://freetp.org/getfile-15252",
+    "yt": "https://www.youtube.com/watch?v=79ux5CZ0ros",
+    "img": "https://content.any.run/tasks/09a8027c-7d58-4f48-905f-3d415f343e09/download/screens/1c7808a6-3645-46cf-9638-e7ce0d79638d/image.jpeg"
+  },
+  {
+    "title": "SteamCMD workshop download",
+    "url": "https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip",
+    "yt": "https://www.youtube.com/watch?v=K99P9xMrZ-4",
+    "img": "https://steamworkshopdownloader.io/assets/img/screenshot4.png"
+  },
+  {
+    "title": "steamtools ",
+    "url": "https://steamtools.net/",
+    "yt": "https://www.youtube.com/watch?v=9vNDVKn3gL0",
+    "img": "https://discord.me/cdn-cgi/image/fit=crop,width=945,height=370,metadata=none,format=auto/https://edge.discord.me/server/c2d604cce7017e149239bac40e24425d3e745a89a495b1b8fd56e8dfb2f95a6a/banner_4e38af53b329046b26624df87be759b427b452057a3eb4ce625c948f461f000b.jpg"
+  }
+];
 
 // Load from browser memory OR use the official list above
 let localGames = JSON.parse(localStorage.getItem('jacky_games')) || [];
