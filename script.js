@@ -37,7 +37,7 @@ let officialGames = [
     "title": "7z",
     "url": "https://www.7-zip.org/",
     "yt": "https://www.youtube.com/watch?v=K99P9xMrZ-4",
-    "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/7-Zip_Icon.svg/1200px-7-Zip_Icon.svg.png"
+    "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/7-Zip_Icon.svg/3840px-7-Zip_Icon.svg.png?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail"
   },
   {
     "title": "online fix Gmod download",
@@ -55,7 +55,7 @@ let officialGames = [
     "title": "steamtools ",
     "url": "https://steamtools.net/",
     "yt": "https://www.youtube.com/watch?v=9vNDVKn3gL0",
-    "img": "https://discord.me/cdn-cgi/image/fit=crop,width=945,height=370,metadata=none,format=auto/https://edge.discord.me/server/c2d604cce7017e149239bac40e24425d3e745a89a495b1b8fd56e8dfb2f95a6a/banner_4e38af53b329046b26624df87be759b427b452057a3eb4ce625c948f461f000b.jpg"
+    "img": "https://repository-images.githubusercontent.com/1242710715/b2321855-74d5-47e3-b54f-4faf8fd30b31"
   }
 ];
 
