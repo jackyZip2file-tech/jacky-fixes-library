@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jacky's Library</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+
+    <header>
+        <div class="header-left">
+            <a href="https://youtube.com/@jackyxfixes" target="_blank" class="social-icon"><i class="fab fa-youtube"></i></a>
+            <a href="https://discord.gg/dUTy6GDezw" target="_blank" class="social-icon"><i class="fab fa-discord"></i></a>
+        </div>
+        
+        <div class="header-center">
+            <h1>JACKY'S LIBRARY</h1>
+            <p>Made by jacky's_fixes</p>
+        </div>
+        
+        <div class="header-right">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="Search games..." onkeyup="searchGames()">
+            </div>
+            <button id="adminBtn" class="btn-create hidden" onclick="openEditModal()">+ New Link</button>
+        </div>
+    </header>
+
+    <main>
+        <div id="linksContainer" class="links-list">
+            </div>
+    </main>
+
+    <div id="linkModal" class="modal">
+        <div class="modal-content">
+            <h2 id="modalTitle">Publish New Game</h2>
+            <input type="text" id="newTitle" placeholder="Game Name">
+            <input type="text" id="newFileUrl" placeholder="Download Link">
+            <input type="text" id="newYtUrl" placeholder="YouTube Preview Link">
+            <input type="text" id="newImgUrl" placeholder="Thumbnail Image URL">
+            <div class="modal-btns">
+                <button id="publishBtn" onclick="publishGame()">Publish</button>
+                <button onclick="toggleModal(false)" class="btn-cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
