@@ -56,6 +56,30 @@ let officialGames = [
     "url": "https://steamtools.net/",
     "yt": "https://www.youtube.com/watch?v=9vNDVKn3gL0",
     "img": "https://repository-images.githubusercontent.com/1242710715/b2321855-74d5-47e3-b54f-4faf8fd30b31"
+  },
+  {
+    "title": "lethal company ",
+    "url": "https://steamrip.com/lethal-company-free-download-l1/",
+    "yt": "https://www.youtube.com/watch?v=0C9KwlbDmk0&pp=ygUVbGV0aGFsIGNvbXBhbnkgZnVubnkg",
+    "img": "https://imgs.search.brave.com/j8fuwU7S7JgqjrytSW2f-U_jQIDMv9MSJJkatyHJ0Is/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly93YWxs/cGFwZXJjYXZlLmNv/bS93cC93cDEzMzEz/MDU2LmpwZw"
+  },
+  {
+    "title": "Human Fall Flat ",
+    "url": "https://steamrip.com/human-fall-flat-free-download-o2/",
+    "yt": "https://www.youtube.com/watch?v=go4iKrHleDo&pp=ygUQaHVtYW4gZmFsbCBmbGF0IA%3D%3D",
+    "img": "https://imgs.search.brave.com/c25ZxA10S95VeyWzn9iZihgMBAUqrrTQA771d-DSqJ8/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9pLnBp/bmltZy5jb20vb3Jp/Z2luYWxzLzU0LzEz/LzE3LzU0MTMxNzlh/OTllNmZlM2E1ZmJm/YTgwNDI2OTExOWQz/LmpwZw"
+  },
+  {
+    "title": "Minecraft hack fix",
+    "url": "https://drive.usercontent.google.com/download?id=1iUO21MlndfbXnAk186R8A32qP93z7qgD&export=download&authuser=0",
+    "yt": "https://www.youtube.com/watch?v=QmDQLk5iyEY&pp=ygUqbWluZWNyYWZ0IGJlZHJvY2sgd2luZG93cyBmcmVlIGRvd25sb2FkIHBj",
+    "img": "https://imgs.search.brave.com/7nTJqXsHq1I8deWFrBpYqpiQsea28xKZjHuCQLxc0MI/rs:fit:200:200:1:0/g:ce/aHR0cHM6Ly9pLnl0/aW1nLmNvbS92aS9t/VHVhNkF5Sms3TS9t/YXhyZXNkZWZhdWx0/LmpwZw"
+  },
+  {
+    "title": "M centers (for older version bedrock luncher)",
+    "url": "https://drive.google.com/drive/folders/1qDN1_LtpTO3sxozB08PLViPM2vFHrsIh",
+    "yt": "",
+    "img": "https://imgs.search.brave.com/RuzmYazFD6NECKGqY4S0HGONT0uvPdIuLLX3dIjZofM/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9wcmV2/aWV3LnJlZGQuaXQv/ajJtNDU1eDg5ZHhl/MS5wbmc_YXV0bz13/ZWJwJnM9OWIxNTg4/OGE0ZjQwNzUyZTZi/YTI4NzkzM2RhYjI3/ODc0Yzc3YjM3Nw"
   }
 ];
 
