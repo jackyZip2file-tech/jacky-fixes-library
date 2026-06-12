@@ -208,6 +208,11 @@ header {
 .btn-create:hover {
     transform: scale(1.05);
     box-shadow: 0 0 20px var(--cyan-intense);
+    filter: brightness(1.08);
+}
+
+.btn-create:active {
+    transform: scale(0.98);
 }
 
 .btn-export {
@@ -262,12 +267,12 @@ header {
 }
 
 .card:hover {
-    transform: scale(1.04) translateY(-4px);
-    border-color: var(--cyan-dim);
+    transform: translateY(-5px);
+    border-color: var(--cyan);
     box-shadow:
-        0 12px 32px rgba(0, 0, 0, 0.5),
-        0 0 24px var(--cyan-glow),
-        0 0 48px rgba(0, 229, 255, 0.12),
+        0 16px 36px rgba(0, 0, 0, 0.55),
+        0 0 28px var(--cyan-glow),
+        0 0 56px rgba(0, 229, 255, 0.18),
         inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
@@ -435,6 +440,11 @@ header {
 
 .btn-action:hover {
     transform: scale(1.04);
+    filter: brightness(1.08);
+}
+
+.btn-action:active {
+    transform: scale(0.98);
 }
 
 .btn-action i {
@@ -497,13 +507,26 @@ header {
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(2, 4, 12, 0.88);
-    backdrop-filter: blur(8px);
+    background: rgba(2, 4, 12, 0);
+    backdrop-filter: blur(0);
+    -webkit-backdrop-filter: blur(0);
     z-index: 2000;
     align-items: flex-start;
     justify-content: center;
     padding: 40px 16px;
     overflow-y: auto;
+    opacity: 0;
+    transition:
+        opacity 0.3s var(--smooth),
+        background 0.3s var(--smooth),
+        backdrop-filter 0.3s var(--smooth);
+}
+
+.modal.open {
+    opacity: 1;
+    background: rgba(2, 4, 12, 0.88);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 
 .modal-content {
@@ -514,6 +537,16 @@ header {
     border-radius: var(--radius-lg);
     border: 1px solid var(--card-border);
     box-shadow: 0 0 40px var(--cyan-glow), 0 20px 60px rgba(0, 0, 0, 0.6);
+    transform: scale(0.95);
+    opacity: 0;
+    transition:
+        transform 0.32s var(--smooth),
+        opacity 0.32s var(--smooth);
+}
+
+.modal.open .modal-content {
+    transform: scale(1);
+    opacity: 1;
 }
 
 .modal-content h2 {
@@ -533,12 +566,147 @@ header {
     border-radius: var(--radius-sm);
     outline: none;
     font-size: 0.9rem;
-    transition: border-color 0.25s, box-shadow 0.25s;
+    transition:
+        border-color 0.3s var(--smooth),
+        box-shadow 0.3s var(--smooth);
 }
 
 .modal-content input:focus {
     border-color: var(--cyan);
-    box-shadow: 0 0 0 2px rgba(0, 229, 255, 0.15);
+    box-shadow:
+        0 0 0 2px rgba(0, 229, 255, 0.12),
+        0 0 18px rgba(0, 229, 255, 0.25),
+        0 0 32px rgba(0, 229, 255, 0.1);
+}
+
+.thumb-or-divider {
+    margin: 0 0 12px;
+    text-align: center;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.75;
+}
+
+/* Thumbnail upload zone */
+.thumb-upload-zone {
+    position: relative;
+    width: 100%;
+    min-height: 120px;
+    margin-bottom: 12px;
+    padding: 20px 16px;
+    border: 2px dashed var(--cyan-dim);
+    border-radius: var(--radius-sm);
+    background: rgba(3, 5, 12, 0.6);
+    cursor: pointer;
+    overflow: hidden;
+    transition:
+        border-color 0.3s var(--smooth),
+        background 0.3s var(--smooth),
+        box-shadow 0.3s var(--smooth),
+        transform 0.2s var(--smooth);
+}
+
+.thumb-upload-zone:hover,
+.thumb-upload-zone.dragover,
+.thumb-upload-zone:focus-within {
+    border-color: var(--cyan);
+    background: rgba(0, 229, 255, 0.04);
+    box-shadow:
+        0 0 0 2px rgba(0, 229, 255, 0.1),
+        0 0 20px rgba(0, 229, 255, 0.2),
+        0 0 36px rgba(0, 229, 255, 0.08);
+}
+
+.thumb-upload-zone.dragover {
+    transform: scale(1.01);
+}
+
+.thumb-upload-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    text-align: center;
+    color: var(--text-muted);
+    pointer-events: none;
+    user-select: none;
+}
+
+.thumb-upload-placeholder i {
+    font-size: 1.75rem;
+    color: var(--cyan);
+    opacity: 0.85;
+    transition: transform 0.3s var(--bounce), opacity 0.3s;
+}
+
+.thumb-upload-zone:hover .thumb-upload-placeholder i,
+.thumb-upload-zone.dragover .thumb-upload-placeholder i {
+    transform: translateY(-3px);
+    opacity: 1;
+}
+
+.thumb-upload-placeholder span {
+    font-size: 0.82rem;
+    line-height: 1.4;
+    max-width: 240px;
+}
+
+.thumb-upload-preview {
+    position: relative;
+    width: 100%;
+    border-radius: calc(var(--radius-sm) - 2px);
+    overflow: hidden;
+    opacity: 0;
+    transition: opacity 0.35s var(--smooth);
+}
+
+.thumb-upload-preview.visible {
+    opacity: 1;
+}
+
+.thumb-upload-preview img {
+    display: block;
+    width: 100%;
+    max-height: 160px;
+    object-fit: cover;
+    border-radius: calc(var(--radius-sm) - 2px);
+}
+
+.thumb-remove-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    background: rgba(15, 23, 42, 0.85);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(248, 113, 113, 0.5);
+    color: var(--del-red);
+    transition:
+        background 0.25s var(--smooth),
+        color 0.25s var(--smooth),
+        transform 0.25s var(--bounce),
+        box-shadow 0.25s var(--smooth);
+}
+
+.thumb-remove-btn:hover {
+    background: var(--del-red);
+    color: #fff;
+    transform: scale(1.06);
+    box-shadow: 0 0 14px rgba(248, 113, 113, 0.4);
+}
+
+.thumb-remove-btn:active {
+    transform: scale(0.96);
 }
 
 .modal-btns {
@@ -555,11 +723,19 @@ header {
     cursor: pointer;
     font-weight: 700;
     font-size: 0.875rem;
-    transition: transform 0.35s var(--bounce), box-shadow 0.3s;
+    transition:
+        transform 0.3s var(--bounce),
+        box-shadow 0.3s var(--smooth),
+        filter 0.25s var(--smooth);
 }
 
 .modal-btns button:hover {
     transform: scale(1.03);
+    filter: brightness(1.08);
+}
+
+.modal-btns button:active {
+    transform: scale(0.98);
 }
 
 #publishBtn {
@@ -579,6 +755,21 @@ header {
 
 .hidden {
     display: none !important;
+}
+
+.admin-banner {
+    grid-column: 1 / -1;
+    background: rgba(255, 202, 40, 0.12);
+    border: 1px solid rgba(255, 202, 40, 0.45);
+    color: #fde68a;
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+.admin-banner i {
+    margin-right: 8px;
 }
 
 .site-meta {
