@@ -1,4 +1,4 @@
-const LIBRARY_VERSION = '8';
+const LIBRARY_VERSION = '9';
 
 // --- 1. CONFIGURATION & ADMIN CHECK ---
 const urlParams = new URLSearchParams(window.location.search);
@@ -280,17 +280,31 @@ function deleteGame(index) {
     }
 }
 
+function formatOfficialGamesExport(gameList) {
+    const lines = ['        const officialGames = ['];
+    gameList.forEach((game, i) => {
+        lines.push('            {');
+        lines.push(`                "title": ${JSON.stringify(game.title)},`);
+        lines.push(`                "url": ${JSON.stringify(game.url)},`);
+        lines.push(`                "yt": ${JSON.stringify(game.yt || '')},`);
+        lines.push(`                "img": ${JSON.stringify(game.img || '')}`);
+        lines.push('            }' + (i < gameList.length - 1 ? ',' : ''));
+    });
+    lines.push('        ];');
+    return lines.join('\n');
+}
+
 function exportData() {
-    const jsonText = JSON.stringify(games, null, 4);
-    navigator.clipboard.writeText(jsonText);
+    const exportText = formatOfficialGamesExport(games);
+    navigator.clipboard.writeText(exportText);
     alert(
-        "COPIED — paste into index.html on GitHub!\n\n" +
+        "COPIED — ready to paste into index.html on GitHub!\n\n" +
         "1. GitHub → your repo → index.html → Edit\n" +
-        "2. Find const officialGames = [ ... ] and replace the whole array\n" +
-        "3. Paste (Ctrl+V) between the [ and ] brackets\n" +
+        "2. Select from const officialGames = [ down to ]; (the whole block)\n" +
+        "3. Delete → Paste (Ctrl+V)\n" +
         "4. Commit / Save\n" +
         "5. Wait 30 sec → refresh site with Ctrl+Shift+R\n\n" +
-        "Everyone will see new links/images. No games.json needed."
+        "Spacing is included — paste exactly as copied."
     );
 }
 
