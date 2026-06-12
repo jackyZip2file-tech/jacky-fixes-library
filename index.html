@@ -3,57 +3,160 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>Jacky's Library</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
 
-    <header class="header">
+    <header>
         <div class="header-left">
-            <a href="https://youtube.com" target="_blank" class="social-icon"><i class="fab fa-youtube"></i></a>
-            <a href="https://discord.com" target="_blank" class="social-icon"><i class="fab fa-discord"></i></a>
+            <a href="https://youtube.com/@jackyxfixes" target="_blank" class="social-icon"><i class="fab fa-youtube"></i></a>
+            <a href="https://discord.gg/dUTy6GDezw" target="_blank" class="social-icon"><i class="fab fa-discord"></i></a>
         </div>
+        
         <div class="header-center">
             <h1>JACKY'S LIBRARY</h1>
-            <p class="subtitle">Made by jacky's_fixes</p>
+            <p>Made by jacky's_fixes</p>
         </div>
+        
         <div class="header-right">
-            <button id="exportBtn" class="btn-export"><i class="fas fa-file-export"></i> Export List</button>
-            <div class="search-container">
-                <i class="fas fa-search search-icon"></i>
-                <input type="text" id="searchBar" placeholder="Search games...">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="Search games..." onkeyup="searchGames()">
             </div>
-            <button id="addLinkBtn" class="btn-add hidden"><i class="fas fa-plus"></i> New Link</button>
+            <button id="adminBtn" class="btn-create hidden" onclick="openEditModal()">+ New Link</button>
         </div>
     </header>
 
-    <main class="container">
-        <div id="gamesGrid" class="games-grid">
+    <main>
+        <div id="linksContainer" class="links-list">
             </div>
     </main>
 
-    <div id="publishModal" class="modal">
+    <div id="linkModal" class="modal">
         <div class="modal-content">
-            <h2>Publish New Game</h2>
-            <input type="text" id="newGameName" placeholder="Game Name">
-            <input type="text" id="newDownloadLink" placeholder="Download Link">
-            <input type="text" id="newYoutubeLink" placeholder="YouTube Preview Link">
-            
-            <div id="dropZone" class="drop-zone">
-                <span class="drop-zone__prompt"><i class="fas fa-cloud-upload-alt" style="font-size: 20px; display: block; margin-bottom: 5px;"></i>Drag & drop thumbnail or click to browse</span>
-                <input type="file" id="newThumbnailFile" class="drop-zone__input" accept="image/*">
+            <h2 id="modalTitle">Publish New Game</h2>
+            <input type="text" id="newTitle" placeholder="Game Name">
+            <input type="text" id="newFileUrl" placeholder="Download Link">
+            <input type="text" id="newYtUrl" placeholder="YouTube Preview Link">
+            <div class="thumb-upload-zone" id="thumbUploadZone">
+                <input type="file" id="thumbFileInput" accept="image/*" hidden>
+                <div class="thumb-upload-placeholder" id="thumbUploadPlaceholder">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <span>Drag & drop thumbnail or click to browse</span>
+                </div>
+                <div class="thumb-upload-preview hidden" id="thumbUploadPreview">
+                    <img id="thumbPreviewImg" alt="Thumbnail preview">
+                    <button type="button" class="thumb-remove-btn" id="thumbRemoveBtn">Remove</button>
+                </div>
             </div>
-            <input type="text" id="newThumbnailUrl" placeholder="Or paste Thumbnail Image URL">
-
-            <div class="modal-buttons">
-                <button id="submitPublish" class="btn-publish">Publish</button>
-                <button id="closeModal" class="btn-cancel">Cancel</button>
+            <p class="thumb-or-divider">— or paste image URL —</p>
+            <input type="text" id="newImgUrl" placeholder="Thumbnail Image URL">
+            <div class="modal-btns">
+                <button id="publishBtn" onclick="publishGame()">Publish</button>
+                <button onclick="toggleModal(false)" class="btn-cancel">Cancel</button>
             </div>
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <!-- Edit your game list here, then upload index.html to GitHub -->
+    <script>
+        const officialGames = [
+            {
+                "title": "rv there yet ",
+                "url": "https://steamrip.com/rv-there-yet-free-download/",
+                "yt": "https://www.youtube.com/watch?v=Br8vAUbdhFI&t=1s&pp=ygUNcnYgdGhlcmUgeWV0IA%3D%3D",
+                "img": "https://gaming-cdn.com/images/products/20702/orig/rv-there-yet-pc-steam-cover.jpg?v=1761118646"
+            },
+            {
+                "title": "Repo",
+                "url": "https://steamrip.com/r-e-p-o-free-download/",
+                "yt": "https://youtu.be/AqhamuepAeE?si=acE8ghNYzmylJsP8",
+                "img": "https://i.ytimg.com/vi/IEhEymYkzRI/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLAAAfZjqO617nHrUEa_EW8HD_ZUfw"
+            },
+            {
+                "title": "content warning ",
+                "url": "https://steamrip.com/content-warning-free-download/",
+                "yt": "https://www.youtube.com/watch?v=iyif6sL3rXs&pp=ygUWY29udGVudCB3YXJuaW5nIG1lbWVzIA%3D%3D",
+                "img": "https://steamgg.net/wp-content/uploads/2024/04/Content-Warning-Free-Download-SteamGG-2-jpg.webp"
+            },
+            {
+                "title": "GWtool",
+                "url": "https://www.moddb.com/mods/garrys-mod/downloads/gwtool-file-made-by-zombieslayer103",
+                "yt": "https://www.youtube.com/watch?v=K99P9xMrZ-4",
+                "img": "https://media.moddb.com/images/downloads/1/179/178961/dcgp6gx-fc2b65c5-e07b-4371-b520-.png"
+            },
+            {
+                "title": "7z",
+                "url": "https://www.7-zip.org/",
+                "yt": "https://www.youtube.com/watch?v=K99P9xMrZ-4",
+                "img": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/7-Zip_Icon.svg/3840px-7-Zip_Icon.svg.png?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail"
+            },
+            {
+                "title": "online fix Gmod download",
+                "url": "https://freetp.org/getfile-15252",
+                "yt": "https://www.youtube.com/watch?v=79ux5CZ0ros",
+                "img": "https://content.any.run/tasks/09a8027c-7d58-4f48-905f-3d415f343e09/download/screens/1c7808a6-3645-46cf-9638-e7ce0d79638d/image.jpeg"
+            },
+            {
+                "title": "SteamCMD workshop download",
+                "url": "https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip",
+                "yt": "https://www.youtube.com/watch?v=K99P9xMrZ-4",
+                "img": "https://steamworkshopdownloader.io/assets/img/screenshot4.png"
+            },
+            {
+                "title": "steamtools ",
+                "url": "https://steamtools.net/",
+                "yt": "https://www.youtube.com/watch?v=9vNDVKn3gL0",
+                "img": "https://repository-images.githubusercontent.com/1242710715/b2321855-74d5-47e3-b54f-4faf8fd30b31"
+            },
+            {
+                "title": "lethal company ",
+                "url": "https://steamrip.com/lethal-company-free-download-l1/",
+                "yt": "https://www.youtube.com/watch?v=0C9KwlbDmk0&pp=ygUVbGV0aGFsIGNvbXBhbnkgZnVubnkg",
+                "img": "https://imgs.search.brave.com/j8fuwU7S7JgqjrytSW2f-U_jQIDMv9MSJJkatyHJ0Is/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly93YWxs/cGFwZXJjYXZlLmNv/bS93cC93cDEzMzEz/MDU2LmpwZw"
+            },
+            {
+                "title": "Human Fall Flat ",
+                "url": "https://steamrip.com/human-fall-flat-free-download-o2/",
+                "yt": "https://www.youtube.com/watch?v=go4iKrHleDo&pp=ygUQaHVtYW4gZmFsbCBmbGF0IA%3D%3D",
+                "img": "https://imgs.search.brave.com/c25ZxA10S95VeyWzn9iZihgMBAUqrrTQA771d-DSqJ8/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9pLnBp/bmltZy5jb20vb3Jp/Z2luYWxzLzU0LzEz/LzE3LzU0MTMxNzlh/OTllNmZlM2E1ZmJm/YTgwNDI2OTExOWQz/LmpwZw"
+            },
+            {
+                "title": "Minecraft hack fix",
+                "url": "https://drive.usercontent.google.com/download?id=1iUO21MlndfbXnAk186R8A32qP93z7qgD&export=download&authuser=0",
+                "yt": "https://www.youtube.com/watch?v=QmDQLk5iyEY&pp=ygUqbWluZWNyYWZ0IGJlZHJvY2sgd2luZG93cyBmcmVlIGRvd25sb2FkIHBj",
+                "img": "https://imgs.search.brave.com/7nTJqXsHq1I8deWFrBpYqpiQsea28xKZjHuCQLxc0MI/rs:fit:200:200:1:0/g:ce/aHR0cHM6Ly9pLnl0/aW1nLmNvbS92aS9t/VHVhNkF5Sms3TS9t/YXhyZXNkZWZhdWx0/LmpwZw"
+            },
+            {
+                "title": "M centers (for older version bedrock luncher)",
+                "url": "https://drive.google.com/drive/folders/1qDN1_LtpTO3sxozB08PLViPM2vFHrsIh",
+                "yt": "",
+                "img": "https://imgs.search.brave.com/RuzmYazFD6NECKGqY4S0HGONT0uvPdIuLLX3dIjZofM/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9wcmV2/aWV3LnJlZGQuaXQv/ajJtNDU1eDg5ZHhl/MS5wbmc_YXV0bz13/ZWJwJnM9OWIxNTg4/OGE0ZjQwNzUyZTZi/YTI4NzkzM2RhYjI3/ODc0Yzc3YjM3Nw"
+            },
+            {
+                "title": "minecraft online.fix files dll",
+                "url": "https://gofile.io/d/OedtBv",
+                "yt": "https://www.youtube.com/watch?v=s4h13QoJo6Q&pp=ygVd2KfZhNit2LXZiNmEINi52YTZiSDZhdin2YrZhiDZg9ix2KfZgdiqINio2YrYr9ix2YjZgyDZhNmE2YPZhdio2YrZiNiq2LEg2YXYrNin2YbYpyBvbmxpbmUuZml4",
+                "img": "https://imgs.search.brave.com/9qw95gg43sZ8pqqildDVYT9phbiDTzL3ga9RK9poLss/rs:fit:200:200:1:0/g:ce/aHR0cHM6Ly9pLnl0/aW1nLmNvbS92aS9N/elllVU9NQWpOVS9t/YXhyZXNkZWZhdWx0/LmpwZw"
+            }
+        ];
+    </script>
+
+    <!-- Bump this number after every GitHub update (stops old script.js cache) -->
+    <script>
+        (function () {
+            var cacheBust = '8';
+            var s = document.createElement('script');
+            s.src = 'script.js?v=' + cacheBust;
+            s.onerror = function () {
+                document.body.insertAdjacentHTML('beforeend',
+                    '<p style="color:#f87171;text-align:center;padding:20px;">Could not load script.js — check GitHub file path.</p>');
+            };
+            document.body.appendChild(s);
+        })();
+    </script>
 </body>
 </html>
