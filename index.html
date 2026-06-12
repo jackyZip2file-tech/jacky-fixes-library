@@ -41,6 +41,18 @@
             <input type="text" id="newTitle" placeholder="Game Name">
             <input type="text" id="newFileUrl" placeholder="Download Link">
             <input type="text" id="newYtUrl" placeholder="YouTube Preview Link">
+            <div class="thumb-upload-zone" id="thumbUploadZone">
+                <input type="file" id="thumbFileInput" accept="image/*" hidden>
+                <div class="thumb-upload-placeholder" id="thumbUploadPlaceholder">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <span>Drag & drop thumbnail or click to browse</span>
+                </div>
+                <div class="thumb-upload-preview hidden" id="thumbUploadPreview">
+                    <img id="thumbPreviewImg" alt="Thumbnail preview">
+                    <button type="button" class="thumb-remove-btn" id="thumbRemoveBtn">Remove</button>
+                </div>
+            </div>
+            <p class="thumb-or-divider">— or paste image URL —</p>
             <input type="text" id="newImgUrl" placeholder="Thumbnail Image URL">
             <div class="modal-btns">
                 <button id="publishBtn" onclick="publishGame()">Publish</button>
@@ -52,7 +64,7 @@
     <!-- Bump this number after every GitHub update (stops old script.js cache) -->
     <script>
         (function () {
-            var cacheBust = '3';
+            var cacheBust = '6';
             var s = document.createElement('script');
             s.src = 'script.js?v=' + cacheBust;
             s.onerror = function () {
