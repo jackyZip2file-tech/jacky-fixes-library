@@ -80,6 +80,12 @@ let officialGames = [
     "url": "https://drive.google.com/drive/folders/1qDN1_LtpTO3sxozB08PLViPM2vFHrsIh",
     "yt": "",
     "img": "https://imgs.search.brave.com/RuzmYazFD6NECKGqY4S0HGONT0uvPdIuLLX3dIjZofM/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9wcmV2/aWV3LnJlZGQuaXQv/ajJtNDU1eDg5ZHhl/MS5wbmc_YXV0bz13/ZWJwJnM9OWIxNTg4/OGE0ZjQwNzUyZTZi/YTI4NzkzM2RhYjI3/ODc0Yzc3YjM3Nw"
+  },
+  {
+    "title": "minecraft online.fix files dll",
+    "url": "https://gofile.io/d/OedtBv",
+    "yt": "https://www.youtube.com/watch?v=s4h13QoJo6Q&pp=ygVd2KfZhNit2LXZiNmEINi52YTZiSDZhdin2YrZhiDZg9ix2KfZgdiqINio2YrYr9ix2YjZgyDZhNmE2YPZhdio2YrZiNiq2LEg2YXYrNin2YbYpyBvbmxpbmUuZml4",
+    "img": ""
   }
 ];
 
