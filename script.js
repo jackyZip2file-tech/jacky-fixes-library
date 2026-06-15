@@ -216,19 +216,7 @@ function openEditModal(index = null) {
         document.getElementById('newTitle').value = game.title;
         document.getElementById('newFileUrl').value = game.url;
         document.getElementById('newYtUrl').value = game.yt || '';
-        const img = game.img || '';
-        if (img.startsWith('data:image/')) {
-            thumbDataUrl = img;
-            thumbFromUpload = true;
-            document.getElementById('newImgUrl').value = '';
-            setThumbPreview(img);
-        } else {
-            thumbDataUrl = '';
-            thumbFromUpload = false;
-            document.getElementById('newImgUrl').value = img;
-            setThumbPreview(img);
-        }
-        document.getElementById('thumbFileInput').value = '';
+        document.getElementById('newImgUrl').value = game.img || '';
         modalTitle.innerText = "Edit Game Info";
         publishBtn.innerText = "Save Changes";
     } else {
@@ -236,7 +224,6 @@ function openEditModal(index = null) {
         document.getElementById('newFileUrl').value = "";
         document.getElementById('newYtUrl').value = "";
         document.getElementById('newImgUrl').value = "";
-        clearThumbUpload();
         modalTitle.innerText = "Publish New Game";
         publishBtn.innerText = "Publish";
     }
@@ -247,8 +234,7 @@ function publishGame() {
     const title = document.getElementById('newTitle').value;
     const url = document.getElementById('newFileUrl').value;
     const yt = document.getElementById('newYtUrl').value;
-    const imgUrl = document.getElementById('newImgUrl').value.trim();
-    const img = (thumbFromUpload && thumbDataUrl) ? thumbDataUrl : imgUrl;
+    const img = document.getElementById('newImgUrl').value.trim();
 
     if (!title || !url) return alert("Name and Link are required!");
 
@@ -333,117 +319,6 @@ function toggleModal(show) {
     }
 }
 
-// --- THUMBNAIL UPLOAD ---
-let thumbFromUpload = false;
-let thumbDataUrl = '';
-
-function setThumbPreview(src) {
-    const placeholder = document.getElementById('thumbUploadPlaceholder');
-    const preview = document.getElementById('thumbUploadPreview');
-    const previewImg = document.getElementById('thumbPreviewImg');
-
-    if (src) {
-        previewImg.src = src;
-        placeholder.classList.add('hidden');
-        preview.classList.remove('hidden');
-        requestAnimationFrame(() => preview.classList.add('visible'));
-    } else {
-        preview.classList.remove('visible');
-        placeholder.classList.remove('hidden');
-        preview.classList.add('hidden');
-        previewImg.removeAttribute('src');
-    }
-}
-
-function clearThumbUpload() {
-    const fileInput = document.getElementById('thumbFileInput');
-    const zone = document.getElementById('thumbUploadZone');
-    fileInput.value = '';
-    zone.classList.remove('dragover');
-    thumbFromUpload = false;
-    thumbDataUrl = '';
-    setThumbPreview('');
-}
-
-function handleThumbFile(file) {
-    if (!file || !file.type.startsWith('image/')) {
-        alert('Please choose a valid image file.');
-        return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-        alert('Image is too large. Please use a file under 2 MB.');
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        thumbDataUrl = e.target.result;
-        thumbFromUpload = true;
-        document.getElementById('newImgUrl').value = '';
-        setThumbPreview(thumbDataUrl);
-    };
-    reader.readAsDataURL(file);
-}
-
-function initThumbUpload() {
-    const zone = document.getElementById('thumbUploadZone');
-    const fileInput = document.getElementById('thumbFileInput');
-    const removeBtn = document.getElementById('thumbRemoveBtn');
-    const imgUrlInput = document.getElementById('newImgUrl');
-
-    zone.addEventListener('click', (e) => {
-        if (e.target === removeBtn || e.target.closest('.thumb-remove-btn')) return;
-        fileInput.click();
-    });
-
-    fileInput.addEventListener('change', () => {
-        if (fileInput.files[0]) handleThumbFile(fileInput.files[0]);
-    });
-
-    removeBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        clearThumbUpload();
-    });
-
-    imgUrlInput.addEventListener('input', () => {
-        const val = imgUrlInput.value.trim();
-        if (val) {
-            thumbFromUpload = false;
-            thumbDataUrl = '';
-            fileInput.value = '';
-            setThumbPreview(val);
-        } else if (!thumbFromUpload) {
-            setThumbPreview('');
-            fileInput.value = '';
-            zone.classList.remove('dragover');
-        }
-    });
-
-    ['dragenter', 'dragover'].forEach((evt) => {
-        zone.addEventListener(evt, (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            zone.classList.add('dragover');
-        });
-    });
-
-    zone.addEventListener('dragleave', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (!zone.contains(e.relatedTarget)) {
-            zone.classList.remove('dragover');
-        }
-    });
-
-    zone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        zone.classList.remove('dragover');
-        const file = e.dataTransfer.files[0];
-        if (file) handleThumbFile(file);
-    });
-}
-
 function copyLink(url) {
     navigator.clipboard.writeText(url);
     alert("Link copied!");
@@ -459,7 +334,6 @@ function openGameByIndex(index) {
 
 function init() {
     initGalaxyBackground();
-    initThumbUpload();
     render();
 }
 
