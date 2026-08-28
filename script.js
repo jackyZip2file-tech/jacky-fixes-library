@@ -885,6 +885,756 @@ function initModalBackdropClose() {
 }
 
 // ============================================================
+// ADVANCED NATIVE COMMENT SYSTEM & MODERATION ENGINE
+// ============================================================
+
+let currentCommentUser = {
+    username: 'Guest_' + Math.floor(1000 + Math.random() * 9000),
+    avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=' + Math.random(),
+    isOwner: false
+};
+
+let currentCommentSort = 'top';
+let replyingToId = null;
+let activeBanTarget = null;
+
+// Persistent Storage Keys
+const STORAGE_COMMENTS = 'jacky_comments_v2';
+const STORAGE_USER = 'jacky_comment_user_v2';
+const STORAGE_VOTES = 'jacky_comment_votes_v2';
+const STORAGE_BANS = 'jacky_bans_v2';
+
+// 1. IDENTITY & OWNER DETECTION
+function initCommentIdentity() {
+    const saved = localStorage.getItem(STORAGE_USER);
+    if (saved) {
+        try { currentCommentUser = JSON.parse(saved); } catch (e) {}
+    }
+
+    // Auto-detect GitHub Owner mode if admin URL param OR username is jackyZip2file-tech
+    if (isOwner || currentCommentUser.username.toLowerCase() === 'jackyzip2file-tech') {
+        currentCommentUser.username = 'jackyZip2file-tech';
+        currentCommentUser.isOwner = true;
+        currentCommentUser.avatar = 'https://github.com/jackyZip2file-tech.png';
+    }
+
+    renderIdentityBar();
+}
+
+function renderIdentityBar() {
+    const bar = document.getElementById('commentIdentityBar');
+    const tabBanBtn = document.getElementById('tabBanManagerBtn');
+    if (!bar) return;
+
+    const ownerBadge = currentCommentUser.isOwner ? '<span class="badge-owner"><i class="fas fa-crown"></i> OWNER</span>' : '';
+    bar.innerHTML = `
+        <div class="identity-user-info">
+            <img class="identity-avatar" src="${escapeHtml(currentCommentUser.avatar)}" alt="${escapeHtml(currentCommentUser.username)}" onerror="this.src='https://api.dicebear.com/7.x/bottts/svg?seed=user'">
+            <span class="identity-username">${escapeHtml(currentCommentUser.username)}</span>
+            ${ownerBadge}
+        </div>
+        <button class="btn-identity-edit" onclick="changeCommentIdentity()"><i class="fas fa-user-edit"></i> Change Name</button>
+    `;
+
+    if (tabBanBtn) {
+        tabBanBtn.classList.toggle('hidden', !currentCommentUser.isOwner);
+    }
+}
+
+function changeCommentIdentity() {
+    const name = prompt('Enter your display name / GitHub username:', currentCommentUser.username);
+    if (!name || !name.trim()) return;
+
+    const cleanName = name.trim();
+    const isOwnerAccount = cleanName.toLowerCase() === 'jackyzip2file-tech' || isOwner;
+
+    currentCommentUser = {
+        username: isOwnerAccount ? 'jackyZip2file-tech' : cleanName,
+        avatar: isOwnerAccount ? 'https://github.com/jackyZip2file-tech.png' : `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(cleanName)}`,
+        isOwner: isOwnerAccount
+    };
+
+    localStorage.setItem(STORAGE_USER, JSON.stringify(currentCommentUser));
+    renderIdentityBar();
+    applyCommentPermissions();
+    renderCommentsFeed();
+    showToast(isOwnerAccount ? '👑 Welcome back, Owner!' : `Logged in as ${cleanName}`, 'success');
+}
+
+// 2. BAN ENGINE (Temporary & Permanent Bans)
+function getBans() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_BANS) || '{}'); }
+    catch (e) { return {}; }
+}
+
+function saveBans(bans) {
+    localStorage.setItem(STORAGE_BANS, JSON.stringify(bans));
+}
+
+function checkBanStatus(username) {
+    if (!username) return { isBanned: false };
+    const bans = getBans();
+    const ban = bans[username.toLowerCase()];
+    if (!ban) return { isBanned: false };
+
+    if (ban.expiry === 'permanent') {
+        return { isBanned: true, isPermanent: true, reason: ban.reason || 'Violation of community rules' };
+    }
+
+    const now = Date.now();
+    if (now > ban.expiry) {
+        // Ban expired — lift automatically
+        delete bans[username.toLowerCase()];
+        saveBans(bans);
+        return { isBanned: false };
+    }
+
+    const remainingMs = ban.expiry - now;
+    return {
+        isBanned: true,
+        isPermanent: false,
+        remainingMs,
+        formattedRemaining: formatBanCountdown(remainingMs),
+        reason: ban.reason || 'Violation of community rules'
+    };
+}
+
+function formatBanCountdown(ms) {
+    const totalSec = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSec / 3600);
+    const mins = Math.floor((totalSec % 3600) / 60);
+    const secs = totalSec % 60;
+
+    if (hours > 24) {
+        const days = Math.floor(hours / 24);
+        return `${days}d ${hours % 24}h remaining`;
+    }
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+function applyCommentPermissions() {
+    const banStatus = checkBanStatus(currentCommentUser.username);
+    const banner = document.getElementById('banAlertBanner');
+    const textarea = document.getElementById('commentTextarea');
+    const postBtn = document.getElementById('postCommentBtn');
+
+    if (banStatus.isBanned) {
+        if (banner) {
+            banner.classList.remove('hidden');
+            const timeText = banStatus.isPermanent ? 'PERMANENT BAN 💀' : `Time remaining: ${banStatus.formattedRemaining}`;
+            banner.innerHTML = `<i class="fas fa-ban"></i> <div><strong>You are banned from commenting!</strong><br><small>${timeText} (Reason: ${escapeHtml(banStatus.reason)})</small></div>`;
+        }
+        if (textarea) { textarea.disabled = true; textarea.placeholder = 'You are banned from posting comments.'; }
+        if (postBtn) { postBtn.disabled = true; }
+    } else {
+        if (banner) banner.classList.add('hidden');
+        if (textarea) { textarea.disabled = false; textarea.placeholder = 'Write a comment or share a fix... (Markdown supported: **bold**, `code`)'; }
+        if (postBtn) { postBtn.disabled = false; }
+    }
+}
+
+function openBanModal(username) {
+    if (!currentCommentUser.isOwner) return showToast('⚠️ Only the site Owner can ban users!', 'warn');
+    activeBanTarget = username;
+    const modal = document.getElementById('banUserModal');
+    const targetText = document.getElementById('banModalTargetText');
+    if (!modal) return;
+
+    if (targetText) targetText.textContent = `Target user: "${username}"`;
+    modal.style.display = 'flex';
+    requestAnimationFrame(() => modal.classList.add('open'));
+}
+
+function closeBanModal() {
+    const modal = document.getElementById('banUserModal');
+    if (!modal) return;
+    modal.classList.remove('open');
+    setTimeout(() => { if (!modal.classList.contains('open')) modal.style.display = 'none'; }, 280);
+}
+
+function confirmUserBan() {
+    if (!activeBanTarget) return;
+
+    const select = document.getElementById('banDurationSelect');
+    const reasonInput = document.getElementById('banReasonInput');
+    const duration = select ? select.value : '86400';
+    const reason = reasonInput ? reasonInput.value.trim() : 'Rule violation';
+
+    const bans = getBans();
+    let expiry = 'permanent';
+
+    if (duration !== 'permanent') {
+        expiry = Date.now() + (parseInt(duration, 10) * 1000);
+    }
+
+    bans[activeBanTarget.toLowerCase()] = {
+        username: activeBanTarget,
+        bannedAt: Date.now(),
+        expiry,
+        reason
+    };
+
+    saveBans(bans);
+    closeBanModal();
+    showToast(`🔨 Banned ${activeBanTarget}!`, 'error');
+
+    if (reasonInput) reasonInput.value = '';
+    applyCommentPermissions();
+    renderBanManagerList();
+    renderCommentsFeed();
+}
+
+function unbanUser(username) {
+    if (!currentCommentUser.isOwner) return;
+    const bans = getBans();
+    delete bans[username.toLowerCase()];
+    saveBans(bans);
+    showToast(`✅ Unbanned ${username}`, 'success');
+    renderBanManagerList();
+    applyCommentPermissions();
+    renderCommentsFeed();
+}
+
+function renderBanManagerList() {
+    const list = document.getElementById('banManagerList');
+    if (!list) return;
+
+    const bans = getBans();
+    const keys = Object.keys(bans);
+
+    if (keys.length === 0) {
+        list.innerHTML = '<p class="comment-placeholder-text"><i class="fas fa-user-check"></i><br>No active bans. Community is clean!</p>';
+        return;
+    }
+
+    list.innerHTML = keys.map(k => {
+        const item = bans[k];
+        const timeText = item.expiry === 'permanent' ? 'Permanent' : formatBanCountdown(item.expiry - Date.now());
+        return `
+            <div class="ban-item">
+                <div class="ban-item-info">
+                    <span class="ban-item-username"><i class="fas fa-ban"></i> ${escapeHtml(item.username)}</span>
+                    <span class="ban-item-time">Expires: ${timeText} · Reason: ${escapeHtml(item.reason)}</span>
+                </div>
+                <button class="btn-unban" onclick="unbanUser('${escapeHtml(item.username)}')"><i class="fas fa-undo"></i> Unban</button>
+            </div>
+        `;
+    }).join('');
+}
+
+// 3. COMMENTS DATA STORE & SEED DATA
+function getCommentsData() {
+    try {
+        const stored = localStorage.getItem(STORAGE_COMMENTS);
+        if (stored) return JSON.parse(stored);
+    } catch (e) {}
+
+    // Seed default comments if empty
+    const seed = [
+        {
+            id: 'c_seed_1',
+            parentId: null,
+            author: 'jackyZip2file-tech',
+            avatar: 'https://github.com/jackyZip2file-tech.png',
+            isOwner: true,
+            text: 'Welcome to **Jacky\'s Library v9.0**! 🚀 Share your fixes, report broken links, or drop game requests below. Markdown supported (`code`, **bold**)!',
+            timestamp: Date.now() - 86400000,
+            isPinned: true,
+            isEdited: false,
+            upvotes: 42,
+            downvotes: 0,
+            reactions: { '🔥': ['jackyZip2file-tech', 'Alex'], '🚀': ['jackyZip2file-tech'], '👍': ['Mes3odi'] }
+        },
+        {
+            id: 'c_seed_2',
+            parentId: null,
+            author: 'Mes3odi',
+            avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=Mes3odi',
+            isOwner: false,
+            text: 'Lethal Company online fix works smoothly! Make sure to copy the `.dll` files into the main directory.',
+            timestamp: Date.now() - 36000000,
+            isPinned: false,
+            isEdited: false,
+            upvotes: 18,
+            downvotes: 1,
+            reactions: { '👍': ['jackyZip2file-tech', 'Sam'], '🔥': ['Mes3odi'] }
+        },
+        {
+            id: 'c_seed_3',
+            parentId: 'c_seed_2',
+            author: 'jackyZip2file-tech',
+            avatar: 'https://github.com/jackyZip2file-tech.png',
+            isOwner: true,
+            text: 'Glad it helped dawg! Enjoy tinkering! 🌿',
+            timestamp: Date.now() - 18000000,
+            isPinned: false,
+            isEdited: false,
+            upvotes: 8,
+            downvotes: 0,
+            reactions: { '❤️': ['Mes3odi'] }
+        }
+    ];
+
+    localStorage.setItem(STORAGE_COMMENTS, JSON.stringify(seed));
+    return seed;
+}
+
+function saveCommentsData(list) {
+    localStorage.setItem(STORAGE_COMMENTS, JSON.stringify(list));
+}
+
+// 4. MARKDOWN & TIME PARSER
+function parseCommentMarkdown(text) {
+    if (!text) return '';
+    let html = escapeHtml(text);
+
+    // Code blocks ```code```
+    html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+    // Inline code `code`
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    // Bold **text**
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    // Italic *text*
+    html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    // URLs
+    html = html.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+    // Line breaks
+    html = html.replace(/\n/g, '<br>');
+
+    return html;
+}
+
+function formatRelativeTime(timestamp) {
+    if (!timestamp) return 'Just now';
+    const diffSec = Math.floor((Date.now() - timestamp) / 1000);
+    if (diffSec < 60) return 'Just now';
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `${diffHr}h ago`;
+    const diffDay = Math.floor(diffHr / 24);
+    if (diffDay < 30) return `${diffDay}d ago`;
+    return new Date(timestamp).toLocaleDateString();
+}
+
+// 5. VOTING & REACTIONS
+function getVotes() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_VOTES) || '{}'); }
+    catch (e) { return {}; }
+}
+
+function voteComment(commentId, direction) {
+    const banStatus = checkBanStatus(currentCommentUser.username);
+    if (banStatus.isBanned) return showToast('⚠️ You are banned from voting.', 'warn');
+
+    const votes = getVotes();
+    const currentVote = votes[commentId];
+    const comments = getCommentsData();
+    const comment = comments.find(c => c.id === commentId);
+
+    if (!comment) return;
+
+    if (currentVote === direction) {
+        // Toggle off
+        delete votes[commentId];
+        if (direction === 'up') comment.upvotes = Math.max(0, (comment.upvotes || 1) - 1);
+        else comment.downvotes = Math.max(0, (comment.downvotes || 1) - 1);
+    } else {
+        if (currentVote === 'up') comment.upvotes = Math.max(0, (comment.upvotes || 1) - 1);
+        if (currentVote === 'down') comment.downvotes = Math.max(0, (comment.downvotes || 1) - 1);
+
+        votes[commentId] = direction;
+        if (direction === 'up') comment.upvotes = (comment.upvotes || 0) + 1;
+        else comment.downvotes = (comment.downvotes || 0) + 1;
+    }
+
+    localStorage.setItem(STORAGE_VOTES, JSON.stringify(votes));
+    saveCommentsData(comments);
+    renderCommentsFeed();
+}
+
+// Balanced Reaction Pairs (👍/👎, 🔥/💩, ❤️/💔, 🚀/💀, 👀/🤡)
+const REACTION_PAIRS = ['👍', '👎', '🔥', '💩', '❤️', '💔', '🚀', '💀', '👀', '🤡'];
+
+function reactComment(commentId, emoji) {
+    const banStatus = checkBanStatus(currentCommentUser.username);
+    if (banStatus.isBanned) return showToast('⚠️ You are banned from reacting.', 'warn');
+
+    const comments = getCommentsData();
+    const comment = comments.find(c => c.id === commentId);
+    if (!comment) return;
+
+    if (!comment.reactions) comment.reactions = {};
+    if (!comment.reactions[emoji]) comment.reactions[emoji] = [];
+
+    const user = currentCommentUser.username;
+    const idx = comment.reactions[emoji].indexOf(user);
+
+    if (idx !== -1) {
+        comment.reactions[emoji].splice(idx, 1);
+        if (comment.reactions[emoji].length === 0) delete comment.reactions[emoji];
+    } else {
+        comment.reactions[emoji].push(user);
+    }
+
+    saveCommentsData(comments);
+    renderCommentsFeed();
+}
+
+// 6. RENDER COMMENTS FEED & TREE
+function setCommentSort(mode) {
+    currentCommentSort = mode;
+    document.querySelectorAll('.sort-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.sort === mode);
+    });
+    renderCommentsFeed();
+}
+
+function renderCommentsFeed() {
+    const container = document.getElementById('commentsFeed');
+    const totalBadge = document.getElementById('totalCommentsCount');
+    if (!container) return;
+
+    const allComments = getCommentsData();
+    if (totalBadge) totalBadge.textContent = `${allComments.length} comment${allComments.length === 1 ? '' : 's'}`;
+
+    if (allComments.length === 0) {
+        container.innerHTML = '<p class="comment-placeholder-text"><i class="fas fa-comment-dots"></i><br>No comments yet. Be the first to start the discussion!</p>';
+        return;
+    }
+
+    // Separate top-level comments and replies
+    const topComments = allComments.filter(c => !c.parentId);
+
+    // Sorting algorithm
+    topComments.sort((a, b) => {
+        if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1; // Pinned first
+
+        if (currentCommentSort === 'top') {
+            const scoreA = (a.upvotes || 0) - (a.downvotes || 0);
+            const scoreB = (b.upvotes || 0) - (b.downvotes || 0);
+            return scoreB - scoreA;
+        }
+        if (currentCommentSort === 'newest') return b.timestamp - a.timestamp;
+        if (currentCommentSort === 'oldest') return a.timestamp - b.timestamp;
+        return 0;
+    });
+
+    container.innerHTML = topComments.map(c => buildCommentNode(c, allComments)).join('');
+}
+
+function buildCommentNode(comment, allComments) {
+    const replies = allComments.filter(r => r.parentId === comment.id);
+    replies.sort((a, b) => a.timestamp - b.timestamp);
+
+    const repliesHtml = replies.length > 0 ? `
+        <div class="comment-replies-list">
+            ${replies.map(r => buildCommentNode(r, allComments)).join('')}
+        </div>
+    ` : '';
+
+    return buildCommentCardHtml(comment, Boolean(comment.parentId)) + repliesHtml;
+}
+
+function buildCommentCardHtml(comment, isReply = false) {
+    const votes = getVotes();
+    const userVote = votes[comment.id];
+    const netScore = (comment.upvotes || 0) - (comment.downvotes || 0);
+    const formattedScore = netScore > 0 ? `+${netScore}` : `${netScore}`;
+
+    const isOwnerComment = comment.isOwner || comment.author.toLowerCase() === 'jackyzip2file-tech';
+    const isCurrentAuthor = currentCommentUser.username.toLowerCase() === comment.author.toLowerCase();
+    const canModerate = currentCommentUser.isOwner;
+
+    // Badges
+    const ownerBadgeHtml = isOwnerComment ? '<span class="badge-owner"><i class="fas fa-crown"></i> OWNER</span>' : '';
+    const pinBadgeHtml = comment.isPinned ? '<span class="pin-badge"><i class="fas fa-thumbtack"></i> PINNED</span>' : '';
+    const editedHtml = comment.isEdited ? '<span class="badge-edited">(edited)</span>' : '';
+
+    // Reaction pills & Discord Tooltips
+    const reactions = comment.reactions || {};
+    const reactionPillsHtml = Object.keys(reactions).map(emoji => {
+        const users = reactions[emoji] || [];
+        if (users.length === 0) return '';
+        const userHasReacted = users.includes(currentCommentUser.username);
+        const tooltipText = `Reacted by: ${users.slice(0, 5).join(', ')}${users.length > 5 ? ` +${users.length - 5} more` : ''}`;
+
+        return `
+            <button class="reaction-pill ${userHasReacted ? 'user-reacted' : ''}" onclick="reactComment('${comment.id}', '${emoji}')">
+                <span>${emoji}</span>
+                <span>${users.length}</span>
+                <span class="reaction-tooltip">${escapeHtml(tooltipText)}</span>
+            </button>
+        `;
+    }).join('');
+
+    // Inline reply box toggle state
+    const isReplyingThis = replyingToId === comment.id;
+    const inlineReplyHtml = isReplyingThis ? `
+        <div class="inline-reply-box">
+            <textarea id="replyTextarea_${comment.id}" placeholder="Replying to @${escapeHtml(comment.author)}..." maxlength="500"></textarea>
+            <div class="inline-reply-actions">
+                <button class="btn-comment-action" onclick="toggleInlineReply(null)">Cancel</button>
+                <button class="btn-post-comment" onclick="submitInlineReply('${comment.id}')"><i class="fas fa-reply"></i> Reply</button>
+            </div>
+        </div>
+    ` : '';
+
+    // Mod Action Buttons
+    let modButtons = '';
+    if (canModerate) {
+        modButtons += `
+            <button class="btn-comment-action" onclick="togglePinComment('${comment.id}')" title="Pin / Unpin"><i class="fas fa-thumbtack"></i> ${comment.isPinned ? 'Unpin' : 'Pin'}</button>
+        `;
+        if (!isOwnerComment) {
+            modButtons += `
+                <button class="btn-comment-action btn-ban-action" onclick="openBanModal('${escapeHtml(comment.author)}')" title="Ban user"><i class="fas fa-gavel"></i> Ban</button>
+            `;
+        }
+    }
+    if (isCurrentAuthor || canModerate) {
+        modButtons += `
+            <button class="btn-comment-action" onclick="editComment('${comment.id}')"><i class="fas fa-edit"></i> Edit</button>
+            <button class="btn-comment-action" onclick="deleteComment('${comment.id}')" style="color:var(--del-red);"><i class="fas fa-trash"></i> Delete</button>
+        `;
+    }
+
+    return `
+        <div class="comment-card ${isReply ? 'is-reply' : ''} ${comment.isPinned ? 'is-pinned' : ''} ${isOwnerComment ? 'is-owner-card' : ''}" id="comment_${comment.id}">
+            <div class="comment-header">
+                <div class="comment-author-info">
+                    <img class="author-avatar" src="${escapeHtml(comment.avatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=user')}" alt="${escapeHtml(comment.author)}" onerror="this.src='https://api.dicebear.com/7.x/bottts/svg?seed=user'">
+                    <span class="author-name">${escapeHtml(comment.author)}</span>
+                    ${ownerBadgeHtml}
+                    ${pinBadgeHtml}
+                </div>
+                <div class="comment-meta">
+                    <span class="comment-time">${formatRelativeTime(comment.timestamp)}</span>
+                    ${editedHtml}
+                </div>
+            </div>
+
+            <div class="comment-body">
+                ${isReply ? '<span class="reply-indicator">↳</span>' : ''}
+                ${parseCommentMarkdown(comment.text)}
+            </div>
+
+            ${reactionPillsHtml ? `<div class="reaction-pills">${reactionPillsHtml}</div>` : ''}
+
+            <div class="comment-footer-actions">
+                <div class="vote-group">
+                    <button class="vote-btn ${userVote === 'up' ? 'up-voted' : ''}" onclick="voteComment('${comment.id}', 'up')" title="Upvote"><i class="fas fa-arrow-up"></i></button>
+                    <span class="vote-score">${formattedScore}</span>
+                    <button class="vote-btn ${userVote === 'down' ? 'down-voted' : ''}" onclick="voteComment('${comment.id}', 'down')" title="Downvote"><i class="fas fa-arrow-down"></i></button>
+                </div>
+
+                <div class="action-buttons-group">
+                    <button class="btn-comment-action" onclick="toggleInlineReply('${comment.id}')"><i class="fas fa-reply"></i> Reply</button>
+                    ${modButtons}
+                </div>
+            </div>
+
+            ${inlineReplyHtml}
+        </div>
+    `;
+}
+
+// 7. INPUT & EMOJI TOOLS
+function updateCharCounter() {
+    const textarea = document.getElementById('commentTextarea');
+    const counter = document.getElementById('commentCharCounter');
+    if (!textarea || !counter) return;
+
+    const len = textarea.value.length;
+    counter.textContent = `${len} / 500`;
+
+    counter.classList.remove('warn', 'danger');
+    if (len > 450) counter.classList.add('danger');
+    else if (len > 400) counter.classList.add('warn');
+}
+
+function insertEmoji(emoji) {
+    const textarea = document.getElementById('commentTextarea');
+    if (!textarea) return;
+
+    const start = textarea.selectionStart || textarea.value.length;
+    const end = textarea.selectionEnd || textarea.value.length;
+    const val = textarea.value;
+
+    textarea.value = val.substring(0, start) + emoji + val.substring(end);
+    textarea.selectionStart = textarea.selectionEnd = start + emoji.length;
+    textarea.focus();
+    updateCharCounter();
+}
+
+function submitNewComment() {
+    const banStatus = checkBanStatus(currentCommentUser.username);
+    if (banStatus.isBanned) return showToast('⚠️ You are banned from commenting.', 'warn');
+
+    const textarea = document.getElementById('commentTextarea');
+    if (!textarea) return;
+    const text = textarea.value.trim();
+
+    if (!text) return showToast('⚠️ Please write a comment before posting!', 'warn');
+
+    const newComment = {
+        id: 'c_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+        parentId: null,
+        author: currentCommentUser.username,
+        avatar: currentCommentUser.avatar,
+        isOwner: currentCommentUser.isOwner,
+        text,
+        timestamp: Date.now(),
+        isPinned: false,
+        isEdited: false,
+        upvotes: 1,
+        downvotes: 0,
+        reactions: {}
+    };
+
+    const list = getCommentsData();
+    list.unshift(newComment);
+    saveCommentsData(list);
+
+    textarea.value = '';
+    updateCharCounter();
+    renderCommentsFeed();
+    showToast('🚀 Comment posted!', 'success');
+}
+
+function toggleInlineReply(commentId) {
+    replyingToId = replyingToId === commentId ? null : commentId;
+    renderCommentsFeed();
+}
+
+function submitInlineReply(parentId) {
+    const banStatus = checkBanStatus(currentCommentUser.username);
+    if (banStatus.isBanned) return showToast('⚠️ You are banned from replying.', 'warn');
+
+    const textarea = document.getElementById(`replyTextarea_${parentId}`);
+    if (!textarea) return;
+
+    const text = textarea.value.trim();
+    if (!text) return showToast('⚠️ Please write a reply!', 'warn');
+
+    const newReply = {
+        id: 'c_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+        parentId,
+        author: currentCommentUser.username,
+        avatar: currentCommentUser.avatar,
+        isOwner: currentCommentUser.isOwner,
+        text,
+        timestamp: Date.now(),
+        isPinned: false,
+        isEdited: false,
+        upvotes: 1,
+        downvotes: 0,
+        reactions: {}
+    };
+
+    const list = getCommentsData();
+    list.push(newReply);
+    saveCommentsData(list);
+
+    replyingToId = null;
+    renderCommentsFeed();
+    showToast('↳ Reply posted!', 'success');
+}
+
+// 8. MODERATION: PIN, EDIT, DELETE, TAB SWITCH
+function togglePinComment(commentId) {
+    if (!currentCommentUser.isOwner) return;
+    const list = getCommentsData();
+    const c = list.find(item => item.id === commentId);
+    if (!c) return;
+
+    c.isPinned = !c.isPinned;
+    saveCommentsData(list);
+    renderCommentsFeed();
+    showToast(c.isPinned ? '📌 Comment pinned!' : 'Comment unpinned', 'info');
+}
+
+function editComment(commentId) {
+    const list = getCommentsData();
+    const c = list.find(item => item.id === commentId);
+    if (!c) return;
+
+    const isCurrentAuthor = currentCommentUser.username.toLowerCase() === c.author.toLowerCase();
+    if (!isCurrentAuthor && !currentCommentUser.isOwner) return;
+
+    const updatedText = prompt('Edit your comment:', c.text);
+    if (updatedText === null) return;
+    const clean = updatedText.trim();
+    if (!clean) return showToast('⚠️ Comment cannot be empty!', 'warn');
+
+    c.text = clean;
+    c.isEdited = true;
+    saveCommentsData(list);
+    renderCommentsFeed();
+    showToast('✏️ Comment updated!', 'success');
+}
+
+function deleteComment(commentId) {
+    const list = getCommentsData();
+    const c = list.find(item => item.id === commentId);
+    if (!c) return;
+
+    const isCurrentAuthor = currentCommentUser.username.toLowerCase() === c.author.toLowerCase();
+    if (!isCurrentAuthor && !currentCommentUser.isOwner) return;
+
+    if (!confirm('Delete this comment and all its replies?')) return;
+
+    // Delete comment and cascaded child replies
+    const idsToDelete = new Set([commentId]);
+    let added = true;
+    while (added) {
+        added = false;
+        list.forEach(item => {
+            if (item.parentId && idsToDelete.has(item.parentId) && !idsToDelete.has(item.id)) {
+                idsToDelete.add(item.id);
+                added = true;
+            }
+        });
+    }
+
+    const filtered = list.filter(item => !idsToDelete.has(item.id));
+    saveCommentsData(filtered);
+    renderCommentsFeed();
+    showToast('🗑️ Comment deleted', 'info');
+}
+
+function switchCommentTab(tab) {
+    const commentsTab = document.getElementById('commentsTabContent');
+    const bansTab = document.getElementById('banManagerTabContent');
+    const tabCommentsBtn = document.getElementById('tabCommentsBtn');
+    const tabBanBtn = document.getElementById('tabBanManagerBtn');
+
+    if (tab === 'bans') {
+        if (commentsTab) commentsTab.classList.add('hidden');
+        if (bansTab) bansTab.classList.remove('hidden');
+        if (tabCommentsBtn) tabCommentsBtn.classList.remove('active');
+        if (tabBanBtn) tabBanBtn.classList.add('active');
+        renderBanManagerList();
+    } else {
+        if (bansTab) bansTab.classList.add('hidden');
+        if (commentsTab) commentsTab.classList.remove('hidden');
+        if (tabBanBtn) tabBanBtn.classList.remove('active');
+        if (tabCommentsBtn) tabCommentsBtn.classList.add('active');
+        renderCommentsFeed();
+    }
+}
+
+// Backdrop close for ban modal
+function initBanModalBackdrop() {
+    const modal = document.getElementById('banUserModal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) closeBanModal();
+        });
+    }
+}
+
+// ============================================================
 // INIT
 // ============================================================
 function init() {
@@ -897,6 +1647,12 @@ function init() {
     initOfflineAlert();
     initKeyboardShortcuts();
     initModalBackdropClose();
+    
+    // Native Comment Engine Initialization
+    initCommentIdentity();
+    applyCommentPermissions();
+    renderCommentsFeed();
+    initBanModalBackdrop();
 }
 
 init();

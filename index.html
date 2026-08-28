@@ -146,20 +146,94 @@
     <!-- COMMENT DRAWER -->
     <div id="commentDrawer" class="comment-drawer" aria-hidden="true">
         <div class="comment-drawer-header">
-            <span><i class="fas fa-comments"></i> Community Comments</span>
+            <div class="comment-header-left">
+                <span><i class="fas fa-comments"></i> Community Comments</span>
+                <div class="comment-header-tabs">
+                    <button id="tabCommentsBtn" class="comment-tab active" onclick="switchCommentTab('comments')"><i class="fas fa-comments"></i> Comments</button>
+                    <button id="tabBanManagerBtn" class="comment-tab hidden" onclick="switchCommentTab('bans')"><i class="fas fa-gavel"></i> Ban Manager</button>
+                </div>
+            </div>
             <button class="comment-drawer-close" onclick="toggleCommentDrawer()" aria-label="Close comments">
                 <i class="fas fa-times"></i>
             </button>
         </div>
         <div class="comment-drawer-body">
-            <div id="utterancesContainer">
-                <script src="https://utteranc.es/client.js"
-                        repo="jackyZip2file-tech/jacky-fixes-library"
-                        issue-term="pathname"
-                        theme="github-dark"
-                        crossorigin="anonymous"
-                        async>
-                </script>
+            <!-- User Identity & Status Bar -->
+            <div id="commentIdentityBar" class="comment-identity-bar"></div>
+
+            <!-- Ban Alert Banner (hidden unless user is banned) -->
+            <div id="banAlertBanner" class="ban-alert-banner hidden"></div>
+
+            <!-- COMMENTS TAB CONTENT -->
+            <div id="commentsTabContent" class="tab-content active">
+                <!-- New Comment Input Box -->
+                <div class="comment-input-box">
+                    <textarea id="commentTextarea" placeholder="Write a comment or share a fix... (Markdown supported: **bold**, `code`)" maxlength="500" oninput="updateCharCounter()"></textarea>
+                    
+                    <div class="comment-input-tools">
+                        <div class="quick-emoji-bar">
+                            <button type="button" class="quick-emoji-btn" onclick="insertEmoji('🔥')">🔥</button>
+                            <button type="button" class="quick-emoji-btn" onclick="insertEmoji('💀')">💀</button>
+                            <button type="button" class="quick-emoji-btn" onclick="insertEmoji('🚀')">🚀</button>
+                            <button type="button" class="quick-emoji-btn" onclick="insertEmoji('💯')">💯</button>
+                            <button type="button" class="quick-emoji-btn" onclick="insertEmoji('⚡')">⚡</button>
+                            <button type="button" class="quick-emoji-btn" onclick="insertEmoji('📌')">📌</button>
+                            <button type="button" class="quick-emoji-btn" onclick="insertEmoji('👍')">👍</button>
+                            <button type="button" class="quick-emoji-btn" onclick="insertEmoji('👎')">👎</button>
+                        </div>
+                        <div class="comment-submit-row">
+                            <span id="commentCharCounter" class="comment-char-counter">0 / 500</span>
+                            <button id="postCommentBtn" class="btn-post-comment" onclick="submitNewComment()"><i class="fas fa-paper-plane"></i> Post</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sort Bar -->
+                <div class="comment-sort-bar">
+                    <div class="sort-tabs">
+                        <span class="sort-label"><i class="fas fa-sort-amount-down"></i> Sort:</span>
+                        <button class="sort-tab active" data-sort="top" onclick="setCommentSort('top')">Top Voted</button>
+                        <button class="sort-tab" data-sort="newest" onclick="setCommentSort('newest')">Newest</button>
+                        <button class="sort-tab" data-sort="oldest" onclick="setCommentSort('oldest')">Oldest</button>
+                    </div>
+                    <span id="totalCommentsCount" class="total-comments-count">0 comments</span>
+                </div>
+
+                <!-- Comments Feed -->
+                <div id="commentsFeed" class="comments-feed"></div>
+            </div>
+
+            <!-- BAN MANAGER TAB CONTENT -->
+            <div id="banManagerTabContent" class="tab-content hidden">
+                <div class="ban-manager-header">
+                    <h3><i class="fas fa-gavel"></i> Ban Management</h3>
+                    <p>Manage banned users and lift bans early.</p>
+                </div>
+                <div id="banManagerList" class="ban-manager-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BAN USER MODAL -->
+    <div id="banUserModal" class="modal ban-modal" role="dialog" aria-modal="true" aria-labelledby="banModalTitle">
+        <div class="modal-content ban-modal-content">
+            <h2 id="banModalTitle"><i class="fas fa-gavel"></i> Ban User</h2>
+            <p id="banModalTargetText" class="ban-target-text">Select ban duration for user:</p>
+            
+            <label for="banDurationSelect" class="ban-label">Ban Duration:</label>
+            <select id="banDurationSelect" class="admin-category-select">
+                <option value="3600">1 Hour</option>
+                <option value="86400" selected>24 Hours</option>
+                <option value="604800">7 Days</option>
+                <option value="2592000">30 Days</option>
+                <option value="permanent">Permanent Ban 💀</option>
+            </select>
+            
+            <input type="text" id="banReasonInput" placeholder="Reason (e.g. Spam / Disrespect)" aria-label="Ban Reason">
+
+            <div class="modal-btns">
+                <button id="confirmBanBtn" class="btn-ban-confirm" onclick="confirmUserBan()">Confirm Ban 🔨</button>
+                <button onclick="closeBanModal()" class="btn-cancel">Cancel</button>
             </div>
         </div>
     </div>
