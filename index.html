@@ -4,47 +4,193 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta name="description" content="Jacky's Library — Free Steam games, multiplayer fixes, tools & patches curated by Jacky's Fixes. Download links, tutorials & more.">
+    <meta property="og:title" content="Jacky's Library">
+    <meta property="og:description" content="Free Steam games, online fixes, and tools curated by Jacky's Fixes.">
+    <meta property="og:type" content="website">
     <title>Jacky's Library</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
 
-    <header>
+    <!-- ============================
+         TOS MODAL (HIGH PRIORITY)
+         ============================ -->
+    <div id="tosModal" class="tos-overlay hidden-tos" role="dialog" aria-modal="true" aria-labelledby="tosHeading">
+        <div class="tos-box">
+            <div class="tos-emoji-banner">⚠️</div>
+            <h2 id="tosHeading" class="tos-heading">HOL UP BEFORE YOU TOUCH ANYTHING</h2>
+            <div class="tos-body">
+                <p>Yo! This site is my personal stash for my friends to grab free Steam games and fixes—zero fluff. If you stumbled here and it helps you out, welcome!</p>
+                <p>⚠️ Real talk though: No wimping out. Game files can trigger false positives or carry unwanted guests. I test what I can, but I'm <strong>NOT</strong> responsible for your machine. Antivirus screaming? Take it or leave it, it's usually just a false flag dawg. Use a spare rig or sandbox if you're worried.</p>
+                <p>Stay safe, don't blame me if things go sideways, and if you don't like it—buzz off or go touch grass! 🌿 Educational purposes only. Enjoy and happy tinkering!</p>
+                <p class="tos-question">Do you understand buddy? 👀</p>
+            </div>
+            <div class="tos-buttons">
+                <button id="tosAgreeBtn" class="tos-btn tos-btn--agree" onclick="acceptTos()">
+                    <i class="fas fa-check-circle"></i> Yes I Understand ✅
+                </button>
+                <button id="tosDeclineBtn" class="tos-btn tos-btn--decline" onclick="declineTos()">
+                    <i class="fas fa-skull"></i> Nope 💀
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MEME OVERLAY (shown on "NAH") -->
+    <div id="memeOverlay" class="meme-overlay" aria-hidden="true">
+        <div class="meme-content">
+            <div class="meme-skull">💀</div>
+            <p class="meme-text">BRUH... 💀<br>Learn how to read first</p>
+        </div>
+    </div>
+
+    <!-- ============================
+         HEADER
+         ============================ -->
+    <header id="siteHeader">
         <div class="header-left">
-            <a href="https://youtube.com/@jackyxfixes" target="_blank" class="social-icon"><i class="fab fa-youtube"></i></a>
+            <a href="https://youtube.com/@jackyxfixes" target="_blank" class="social-icon" aria-label="YouTube Channel">
+                <i class="fab fa-youtube"></i>
+            </a>
             <span class="social-icon social-icon--unavailable" aria-disabled="true">
                 <i class="fab fa-discord"></i>
                 <span class="social-icon-tooltip">Discord unavailable</span>
             </span>
         </div>
-        
+
         <div class="header-center">
-            <h1>JACKY'S LIBRARY</h1>
-            <p>Made by jacky's_fixes</p>
+            <h1 id="siteTitle">JACKY'S LIBRARY</h1>
+            <p class="header-subtitle">Made by jacky's_fixes</p>
+            <div id="statCounter" class="stat-counter">
+                <span id="statGames" class="stat-item"><i class="fas fa-gamepad"></i> <span id="statGamesNum">0</span> Games</span>
+                <span class="stat-sep">·</span>
+                <span class="stat-item"><i class="fas fa-wrench"></i> Tools & Fixes</span>
+            </div>
         </div>
-        
+
         <div class="header-right">
+            <button id="oledToggleBtn" class="btn-icon-pill" onclick="toggleOled()" title="Toggle OLED Dark Mode" aria-label="Toggle OLED mode">
+                <i class="fas fa-circle-half-stroke"></i>
+            </button>
+            <button id="changelogBtn" class="btn-icon-pill btn-changelog" onclick="openChangelog()" title="What's New" aria-label="Changelog">
+                <i class="fas fa-star"></i> v9
+            </button>
             <div class="search-box">
-                <i class="fas fa-search"></i>
-                <input type="text" id="searchInput" placeholder="Search games..." onkeyup="searchGames()">
+                <i class="fas fa-search" aria-hidden="true"></i>
+                <input type="text" id="searchInput" placeholder="Search games... ( / )" onkeyup="searchGames()" aria-label="Search games">
             </div>
             <button id="adminBtn" class="btn-create hidden" onclick="openEditModal()">+ New Link</button>
         </div>
     </header>
 
-    <main>
-        <div id="linksContainer" class="links-list">
+    <!-- ============================
+         CONTROLS BAR (Filter + Sort + Count)
+         ============================ -->
+    <div id="controlsBar" class="controls-bar">
+        <div class="filter-tags" id="filterTags" role="tablist" aria-label="Category filter">
+            <button class="filter-tag active" data-filter="all" role="tab" aria-selected="true" onclick="setFilter('all')">
+                <i class="fas fa-border-all"></i> All
+            </button>
+            <button class="filter-tag" data-filter="online" role="tab" aria-selected="false" onclick="setFilter('online')">
+                <i class="fas fa-wifi"></i> Multiplayer / Online
+            </button>
+            <button class="filter-tag" data-filter="singleplayer" role="tab" aria-selected="false" onclick="setFilter('singleplayer')">
+                <i class="fas fa-user"></i> Singleplayer
+            </button>
+            <button class="filter-tag" data-filter="tools" role="tab" aria-selected="false" onclick="setFilter('tools')">
+                <i class="fas fa-wrench"></i> Tools & Fixes
+            </button>
+        </div>
+
+        <div class="controls-right">
+            <span id="filterCountBadge" class="filter-count-badge">Loading...</span>
+            <div class="sort-wrap">
+                <i class="fas fa-sort" aria-hidden="true"></i>
+                <select id="sortSelect" class="sort-select" onchange="applySorting()" aria-label="Sort games">
+                    <option value="default">Default Order</option>
+                    <option value="az">A → Z</option>
+                    <option value="za">Z → A</option>
+                    <option value="recent">Recently Added</option>
+                </select>
             </div>
+        </div>
+    </div>
+
+    <!-- ============================
+         MAIN CONTENT
+         ============================ -->
+    <main>
+        <div id="linksContainer" class="links-list"></div>
     </main>
 
-    <div id="linkModal" class="modal">
+    <!-- ============================
+         BACK TO TOP BUTTON
+         ============================ -->
+    <button id="backToTopBtn" class="btn-back-top hidden-off" onclick="scrollToTop()" title="Back to top" aria-label="Back to top">
+        <i class="fas fa-chevron-up"></i>
+    </button>
+
+    <!-- ============================
+         COMMENT DRAWER TOGGLE
+         ============================ -->
+    <button id="commentDrawerToggle" class="btn-comment-toggle" onclick="toggleCommentDrawer()" title="Toggle Comments" aria-label="Toggle comments">
+        <i class="fas fa-comments"></i>
+        <span>Comments</span>
+    </button>
+
+    <!-- COMMENT DRAWER -->
+    <div id="commentDrawer" class="comment-drawer" aria-hidden="true">
+        <div class="comment-drawer-header">
+            <span><i class="fas fa-comments"></i> Community Comments</span>
+            <button class="comment-drawer-close" onclick="toggleCommentDrawer()" aria-label="Close comments">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="comment-drawer-body">
+            <p class="comment-placeholder-text">
+                <i class="fas fa-comment-dots"></i><br>
+                Comments powered by GitHub Discussions.<br>
+                <a href="https://github.com" target="_blank" rel="noopener noreferrer">Connect via GitHub</a> to leave a comment.
+            </p>
+            <!-- Giscus script placeholder — replace with your repo's Giscus embed code -->
+            <!--
+            <script src="https://giscus.app/client.js"
+                data-repo="YOUR_USERNAME/YOUR_REPO"
+                data-repo-id="YOUR_REPO_ID"
+                data-category="General"
+                data-category-id="YOUR_CATEGORY_ID"
+                data-mapping="pathname"
+                data-reactions-enabled="1"
+                data-emit-metadata="0"
+                data-theme="dark"
+                crossorigin="anonymous"
+                async>
+            </script>
+            -->
+        </div>
+    </div>
+
+    <!-- ============================
+         ADMIN EDIT MODAL
+         ============================ -->
+    <div id="linkModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="modal-content">
             <h2 id="modalTitle">Publish New Game</h2>
-            <input type="text" id="newTitle" placeholder="Game Name">
-            <input type="text" id="newFileUrl" placeholder="Download Link">
-            <input type="text" id="newYtUrl" placeholder="YouTube Preview Link">
-            <input type="text" id="newImgUrl" placeholder="Thumbnail Image URL">
+            <input type="text" id="newTitle" placeholder="Game Name" aria-label="Game Name">
+            <input type="text" id="newFileUrl" placeholder="Download Link" aria-label="Download Link">
+            <input type="text" id="newYtUrl" placeholder="YouTube Preview Link" aria-label="YouTube Preview Link">
+            <input type="text" id="newImgUrl" placeholder="Thumbnail Image URL" aria-label="Thumbnail URL">
+            <select id="newCategory" class="admin-category-select" aria-label="Category">
+                <option value="auto">🔄 Auto-detect from title</option>
+                <option value="singleplayer">🎮 Singleplayer</option>
+                <option value="online">🌐 Multiplayer / Online</option>
+                <option value="tools">🔧 Tools &amp; Fixes</option>
+            </select>
             <div class="modal-btns">
                 <button id="publishBtn" onclick="publishGame()">Publish</button>
                 <button onclick="toggleModal(false)" class="btn-cancel">Cancel</button>
@@ -52,7 +198,117 @@
         </div>
     </div>
 
-    <!-- Edit your game list here, then upload index.html to GitHub -->
+    <!-- ============================
+         YOUTUBE EMBED MODAL
+         ============================ -->
+    <div id="ytModal" class="modal yt-modal" role="dialog" aria-modal="true" aria-label="Video Preview">
+        <div class="modal-content yt-modal-content">
+            <div class="yt-modal-header">
+                <span class="yt-modal-title"><i class="fab fa-youtube"></i> Tutorial / Preview</span>
+                <button class="yt-close-btn" onclick="closeYtModal()" aria-label="Close video">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="yt-iframe-wrap">
+                <iframe id="ytIframe" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen title="Game tutorial video"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================
+         IMAGE LIGHTBOX MODAL
+         ============================ -->
+    <div id="lightboxModal" class="modal lightbox-modal" role="dialog" aria-modal="true" aria-label="Image preview" onclick="closeLightbox()">
+        <div class="lightbox-content" onclick="event.stopPropagation()">
+            <button class="lightbox-close" onclick="closeLightbox()" aria-label="Close image">
+                <i class="fas fa-times"></i>
+            </button>
+            <img id="lightboxImg" src="" alt="Full size thumbnail" class="lightbox-img">
+        </div>
+    </div>
+
+    <!-- ============================
+         CHANGELOG MODAL
+         ============================ -->
+    <div id="changelogModal" class="modal changelog-modal" role="dialog" aria-modal="true" aria-labelledby="changelogTitle">
+        <div class="modal-content changelog-content">
+            <h2 id="changelogTitle"><i class="fas fa-star"></i> What's New — v9.0</h2>
+            <div class="changelog-body">
+                <div class="changelog-entry">
+                    <span class="changelog-badge new">NEW</span>
+                    <span>ToS agreement modal on first visit</span>
+                </div>
+                <div class="changelog-entry">
+                    <span class="changelog-badge new">NEW</span>
+                    <span>YouTube video previews open in-site (no new tab)</span>
+                </div>
+                <div class="changelog-entry">
+                    <span class="changelog-badge new">NEW</span>
+                    <span>Category filter bar (All / Multiplayer / Singleplayer / Tools)</span>
+                </div>
+                <div class="changelog-entry">
+                    <span class="changelog-badge new">NEW</span>
+                    <span>Sorting: A-Z, Z-A, Recently Added</span>
+                </div>
+                <div class="changelog-entry">
+                    <span class="changelog-badge new">NEW</span>
+                    <span>Heart / Favorites system (locally saved)</span>
+                </div>
+                <div class="changelog-entry">
+                    <span class="changelog-badge new">NEW</span>
+                    <span>Status badges: Online, Not Fixed, Tool/Fix</span>
+                </div>
+                <div class="changelog-entry">
+                    <span class="changelog-badge new">NEW</span>
+                    <span>OLED pure black mode toggle</span>
+                </div>
+                <div class="changelog-entry">
+                    <span class="changelog-badge new">NEW</span>
+                    <span>Image lightbox (click thumbnail to zoom)</span>
+                </div>
+                <div class="changelog-entry">
+                    <span class="changelog-badge new">NEW</span>
+                    <span>Keyboard shortcuts: / = search, ESC = close modals</span>
+                </div>
+                <div class="changelog-entry">
+                    <span class="changelog-badge new">NEW</span>
+                    <span>Offline/network alert toast notification</span>
+                </div>
+                <div class="changelog-entry">
+                    <span class="changelog-badge new">NEW</span>
+                    <span>Toast copy feedback (no more alert popups)</span>
+                </div>
+                <div class="changelog-entry">
+                    <span class="changelog-badge new">NEW</span>
+                    <span>Animated fiery title glow, enhanced card neon hover</span>
+                </div>
+                <div class="changelog-entry">
+                    <span class="changelog-badge fix">FIX</span>
+                    <span>Footer cleaned up — proper metadata display</span>
+                </div>
+                <div class="changelog-entry">
+                    <span class="changelog-badge fix">FIX</span>
+                    <span>Mobile grid improved — 1-to-2 column responsive</span>
+                </div>
+                <div class="changelog-entry">
+                    <span class="changelog-badge fix">FIX</span>
+                    <span>Skeleton loading shimmer on thumbnails</span>
+                </div>
+            </div>
+            <div class="modal-btns">
+                <button onclick="closeChangelog()" class="btn-cancel">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================
+         TOAST CONTAINER
+         ============================ -->
+    <div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- ============================
+         GAME DATA (Edit here, then push to GitHub)
+         ============================ -->
     <script>
         const officialGames = [
             {
@@ -187,7 +443,7 @@
     <!-- Bump this number after every GitHub update (stops old script.js cache) -->
     <script>
         (function () {
-            var cacheBust = '9';
+            var cacheBust = '9.1';
             var s = document.createElement('script');
             s.src = 'script.js?v=' + cacheBust;
             s.onerror = function () {
