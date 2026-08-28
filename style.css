@@ -1661,6 +1661,11 @@ body.oled-mode #oledToggleBtn {
     text-decoration: underline;
 }
 
+.utterances {
+    max-width: 100% !important;
+    width: 100% !important;
+}
+
 /* ========== SITE META / FOOTER ========== */
 .site-meta {
     position: relative;
