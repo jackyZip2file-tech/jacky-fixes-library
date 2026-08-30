@@ -424,20 +424,29 @@ function buildTutorialRow(game) {
 }
 
 // ============================================================
+// VIRUS EXPLANATION MODAL
+// ============================================================
+function openVirusExplanationModal() {
+    openYtModal('https://youtu.be/jFdpSRGldtU');
+}
+
+// ============================================================
 // ACTION BUTTONS (admin + public)
 // ============================================================
 function buildActions(game, index) {
-    const reportUrl = `https://github.com/search?q=jacky+library+broken+link&type=issues`;
+    const bugBtnHtml = `<button type="button" class="btn-action btn-bug" onclick="openVirusExplanationModal()" title="Is it a virus? Watch explanation" aria-label="Is it a virus? Watch explanation"><i class="fas fa-bug"></i></button>`;
     if (isOwner) {
         return `
             <button type="button" class="btn-action btn-edit" onclick="openEditModal(${index})"><i class="fas fa-edit"></i> Edit</button>
             <button type="button" class="btn-action btn-delete" onclick="deleteGame(${index})"><i class="fas fa-trash"></i> Delete</button>
-            <button type="button" class="btn-action btn-view" onclick="openGameByIndex(${index})"><i class="fas fa-download"></i> View</button>`;
+            <button type="button" class="btn-action btn-view" onclick="openGameByIndex(${index})"><i class="fas fa-download"></i> View</button>
+            ${bugBtnHtml}`;
     }
     return `
         <button type="button" class="btn-action btn-copy" onclick="copyLinkByIndex(${index})"><i class="fas fa-copy"></i> Copy</button>
         <button type="button" class="btn-action btn-view" onclick="openGameByIndex(${index})"><i class="fas fa-external-link-alt"></i> Download</button>
-        <button type="button" class="btn-action btn-report" onclick="reportBroken(${index})" title="Report broken link"><i class="fas fa-flag"></i></button>`;
+        <button type="button" class="btn-action btn-report" onclick="reportBroken(${index})" title="Report broken link" aria-label="Report broken link"><i class="fas fa-flag"></i></button>
+        ${bugBtnHtml}`;
 }
 
 // ============================================================
