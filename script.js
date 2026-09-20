@@ -427,7 +427,7 @@ function buildTutorialRow(game) {
 // VIRUS EXPLANATION MODAL
 // ============================================================
 function openVirusExplanationModal() {
-    openYtModal('https://youtu.be/jFdpSRGldtU');
+    openYtModal('https://youtu.be/aKNhJdMyEjk');
 }
 
 // ============================================================
