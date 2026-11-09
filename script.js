@@ -6,7 +6,55 @@ const LIBRARY_VERSION = '9.0';
 
 // --- 1. CONFIGURATION & ADMIN CHECK ---
 const urlParams = new URLSearchParams(window.location.search);
-const isOwner = urlParams.get('admin') === 'jacky';
+// Admin is now tied strictly to the owner's Gmail (Firebase Auth). `?admin=jacky` kept as a legacy fallback toggle.
+let isOwner = false;
+let currentUser = null;
+let auth = null;
+let db = null;
+
+// Firebase configuration (provided by owner)
+const firebaseConfig = {
+  apiKey: "AIzaSyA3iDLa-mREB-L3Z_l2KERYNaznv2uBw6E",
+  authDomain: "jackyfixes.firebaseapp.com",
+  projectId: "jackyfixes",
+  storageBucket: "jackyfixes.firebasestorage.app",
+  messagingSenderId: "71526165841",
+  appId: "1:71526165841:web:143caa18eb8b4eeb24df90",
+  measurementId: "G-KEWYEWV55J"
+};
+
+function initFirebase() {
+  if (typeof firebase === 'undefined') { console.warn('Firebase SDK not loaded'); return; }
+  const app = firebase.initializeApp(firebaseConfig);
+  auth = firebase.auth();
+  db = firebase.firestore();
+  auth.onAuthStateChanged(async (user) => {
+    currentUser = user;
+    if (user && user.email && user.email.toLowerCase() === 'anaflousoussama555@gmail.com') {
+      isOwner = true;
+    } else {
+      isOwner = (urlParams.get('admin') === 'jacky');
+    }
+    renderAuthUI();
+    initCommentIdentity();
+    applyCommentPermissions();
+    if (isOwner) {
+      const adminBtn = document.getElementById('adminBtn');
+      if (adminBtn) adminBtn.classList.remove('hidden');
+      const headerRight = document.querySelector('.header-right');
+      if (headerRight && !document.getElementById('exportBtn')) {
+        const exportBtn = document.createElement('button');
+        exportBtn.id = 'exportBtn';
+        exportBtn.innerText = 'Export officialGames';
+        exportBtn.className = 'btn-create btn-export';
+        exportBtn.onclick = exportData;
+        headerRight.prepend(exportBtn);
+      }
+    }
+    // reload comments from Firestore if available
+    if (typeof loadCommentsFromFirestore === 'function') loadCommentsFromFirestore();
+  });
+}
 
 // --- 2. THE DATA lives in officialGames inside index.html ---
 let games = JSON.parse(JSON.stringify(officialGames));
@@ -19,6 +67,10 @@ let currentFilter = 'all';
 let currentSort = 'default';
 let currentSearch = '';
 let favorites = JSON.parse(localStorage.getItem('jacky_favorites') || '[]');
+
+// --- Firebase comments state (Firestore-backed, real-time) ---
+let rawComments = [];
+let commentsUnsub = null;
 
 // ============================================================
 // ADMIN PANEL SETUP (preserved intact)
@@ -339,6 +391,14 @@ function applyFiltersAndRender() {
     }
 
     filtered.forEach((game, displayIndex) => {
+        // Inject a native ad slot every 6th card (hidden by default)
+        if (displayIndex > 0 && displayIndex % 6 === 0) {
+            const adCard = document.createElement('div');
+            adCard.className = 'ad-slot ad-in-grid';
+            adCard.setAttribute('aria-hidden', 'true');
+            adCard.innerHTML = '<!-- Ad slot: paste ad network script here -->';
+            container.appendChild(adCard);
+        }
         // Find real index in games[] for admin operations
         const realIndex = games.indexOf(game);
         buildCard(container, game, realIndex, displayIndex);
@@ -915,18 +975,23 @@ const STORAGE_BANS = 'jacky_bans_v2';
 
 // 1. IDENTITY & OWNER DETECTION
 function initCommentIdentity() {
-    const saved = localStorage.getItem(STORAGE_USER);
-    if (saved) {
-        try { currentCommentUser = JSON.parse(saved); } catch (e) {}
+    if (currentUser) {
+        currentCommentUser = {
+            username: currentUser.displayName || currentUser.email.split('@')[0],
+            avatar: currentUser.photoURL || 'https://api.dicebear.com/7.x/bottts/svg?seed=' + encodeURIComponent(currentUser.email),
+            isOwner: isOwner
+        };
+    } else {
+        const saved = localStorage.getItem(STORAGE_USER);
+        if (saved) {
+            try { currentCommentUser = JSON.parse(saved); } catch (e) {}
+        }
+        if (isOwner || (currentCommentUser.username || '').toLowerCase() === 'jackyzip2file-tech') {
+            currentCommentUser.username = 'jackyZip2file-tech';
+            currentCommentUser.isOwner = true;
+            currentCommentUser.avatar = 'https://github.com/jackyZip2file-tech.png';
+        }
     }
-
-    // Auto-detect GitHub Owner mode if admin URL param OR username is jackyZip2file-tech
-    if (isOwner || currentCommentUser.username.toLowerCase() === 'jackyzip2file-tech') {
-        currentCommentUser.username = 'jackyZip2file-tech';
-        currentCommentUser.isOwner = true;
-        currentCommentUser.avatar = 'https://github.com/jackyZip2file-tech.png';
-    }
-
     renderIdentityBar();
 }
 
@@ -1258,8 +1323,12 @@ function voteComment(commentId, direction) {
     }
 
     localStorage.setItem(STORAGE_VOTES, JSON.stringify(votes));
-    saveCommentsData(comments);
-    renderCommentsFeed();
+    if (db && comment) {
+        db.collection('comments').doc(commentId).update({
+            upvotes: comment.upvotes || 0,
+            downvotes: comment.downvotes || 0
+        }).catch(() => {});
+    }
 }
 
 // Balanced Reaction Pairs (👍/👎, 🔥/💩, ❤️/💔, 🚀/💀, 👀/🤡)
@@ -1286,8 +1355,9 @@ function reactComment(commentId, emoji) {
         comment.reactions[emoji].push(user);
     }
 
-    saveCommentsData(comments);
-    renderCommentsFeed();
+    if (db && comment) {
+        db.collection('comments').doc(commentId).update({ reactions: comment.reactions }).catch(() => {});
+    }
 }
 
 // 6. RENDER COMMENTS FEED & TREE
@@ -1477,6 +1547,7 @@ function insertEmoji(emoji) {
 }
 
 function submitNewComment() {
+    if (!currentUser) return showToast('Sign in with Google to comment.', 'warn');
     const banStatus = checkBanStatus(currentCommentUser.username);
     if (banStatus.isBanned) return showToast('⚠️ You are banned from commenting.', 'warn');
 
@@ -1487,11 +1558,10 @@ function submitNewComment() {
     if (!text) return showToast('⚠️ Please write a comment before posting!', 'warn');
 
     const newComment = {
-        id: 'c_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
         parentId: null,
-        author: currentCommentUser.username,
-        avatar: currentCommentUser.avatar,
-        isOwner: currentCommentUser.isOwner,
+        author: currentUser.displayName || currentUser.email.split('@')[0],
+        avatar: currentUser.photoURL || currentCommentUser.avatar,
+        isOwner: isOwner,
         text,
         timestamp: Date.now(),
         isPinned: false,
@@ -1501,13 +1571,11 @@ function submitNewComment() {
         reactions: {}
     };
 
-    const list = getCommentsData();
-    list.unshift(newComment);
-    saveCommentsData(list);
-
-    textarea.value = '';
-    updateCharCounter();
-    renderCommentsFeed();
+    if (!db) return showToast('Database not ready.', 'error');
+    db.collection('comments').add(newComment).then(() => {
+        textarea.value = '';
+        updateCharCounter();
+    }).catch(err => showToast('Failed: ' + err.message, 'error'));
     showToast('🚀 Comment posted!', 'success');
 }
 
@@ -1517,6 +1585,7 @@ function toggleInlineReply(commentId) {
 }
 
 function submitInlineReply(parentId) {
+    if (!currentUser) return showToast('Sign in with Google to reply.', 'warn');
     const banStatus = checkBanStatus(currentCommentUser.username);
     if (banStatus.isBanned) return showToast('⚠️ You are banned from replying.', 'warn');
 
@@ -1527,11 +1596,10 @@ function submitInlineReply(parentId) {
     if (!text) return showToast('⚠️ Please write a reply!', 'warn');
 
     const newReply = {
-        id: 'c_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
         parentId,
-        author: currentCommentUser.username,
-        avatar: currentCommentUser.avatar,
-        isOwner: currentCommentUser.isOwner,
+        author: currentUser.displayName || currentUser.email.split('@')[0],
+        avatar: currentUser.photoURL || currentCommentUser.avatar,
+        isOwner: isOwner,
         text,
         timestamp: Date.now(),
         isPinned: false,
@@ -1541,12 +1609,10 @@ function submitInlineReply(parentId) {
         reactions: {}
     };
 
-    const list = getCommentsData();
-    list.push(newReply);
-    saveCommentsData(list);
-
-    replyingToId = null;
-    renderCommentsFeed();
+    if (!db) return showToast('Database not ready.', 'error');
+    db.collection('comments').add(newReply).then(() => {
+        replyingToId = null;
+    }).catch(err => showToast('Failed: ' + err.message, 'error'));
     showToast('↳ Reply posted!', 'success');
 }
 
@@ -1557,10 +1623,9 @@ function togglePinComment(commentId) {
     const c = list.find(item => item.id === commentId);
     if (!c) return;
 
-    c.isPinned = !c.isPinned;
-    saveCommentsData(list);
-    renderCommentsFeed();
-    showToast(c.isPinned ? '📌 Comment pinned!' : 'Comment unpinned', 'info');
+    const newPinned = !c.isPinned;
+    if (db) db.collection('comments').doc(commentId).update({ isPinned: newPinned }).catch(err => showToast('Failed: ' + err.message, 'error'));
+    showToast(newPinned ? '📌 Comment pinned!' : 'Comment unpinned', 'info');
 }
 
 function editComment(commentId) {
@@ -1576,10 +1641,7 @@ function editComment(commentId) {
     const clean = updatedText.trim();
     if (!clean) return showToast('⚠️ Comment cannot be empty!', 'warn');
 
-    c.text = clean;
-    c.isEdited = true;
-    saveCommentsData(list);
-    renderCommentsFeed();
+    if (db) db.collection('comments').doc(commentId).update({ text: clean, isEdited: true }).catch(err => showToast('Failed: ' + err.message, 'error'));
     showToast('✏️ Comment updated!', 'success');
 }
 
@@ -1606,9 +1668,7 @@ function deleteComment(commentId) {
         });
     }
 
-    const filtered = list.filter(item => !idsToDelete.has(item.id));
-    saveCommentsData(filtered);
-    renderCommentsFeed();
+    if (db) idsToDelete.forEach(cid => { db.collection('comments').doc(cid).delete().catch(() => {}); });
     showToast('🗑️ Comment deleted', 'info');
 }
 
@@ -1646,7 +1706,80 @@ function initBanModalBackdrop() {
 // ============================================================
 // INIT
 // ============================================================
+function renderAuthUI() {
+    const headerRight = document.querySelector('.header-right');
+    if (!headerRight) return;
+    let authSlot = document.getElementById('authSlot');
+    if (!authSlot) {
+        authSlot = document.createElement('div');
+        authSlot.id = 'authSlot';
+        authSlot.style.display = 'inline-flex';
+        authSlot.style.alignItems = 'center';
+        authSlot.style.gap = '8px';
+        headerRight.insertBefore(authSlot, headerRight.firstChild);
+    }
+    if (currentUser) {
+        const name = currentUser.displayName || currentUser.email;
+        const photo = currentUser.photoURL || '';
+        authSlot.innerHTML = `
+            ${photo ? `<img src="${escapeHtml(photo)}" alt="" style="width:28px;height:28px;border-radius:50%;border:1px solid #2a3a5a;">` : ''}
+            <span style="font-size:12px;color:#cbd5e1;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(name)}</span>
+            <button class="btn-icon-pill" onclick="signOutGoogle()" title="Sign out" aria-label="Sign out"><i class="fas fa-sign-out-alt"></i></button>
+        `;
+    } else {
+        authSlot.innerHTML = `<button class="btn-create" onclick="signInGoogle()" style="font-size:12px;padding:6px 12px;"><i class="fab fa-google"></i> Sign in with Google</button>`;
+    }
+}
+
+function signInGoogle() {
+    if (!auth) return;
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).catch(err => showToast(err.message, 'error'));
+}
+
+function signOutGoogle() {
+    if (!auth) return;
+    auth.signOut();
+}
+
+// ============================================================
+// FIRESTORE COMMENTS (real-time, multi-user)
+// ============================================================
+function initCommentsFirestore() {
+    if (!db) return;
+    if (commentsUnsub) commentsUnsub();
+    commentsUnsub = db.collection('comments').orderBy('timestamp', 'asc').onSnapshot((snap) => {
+        rawComments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (rawComments.length === 0 && isOwner) {
+            seedCommentsToFirestore();
+            return;
+        }
+        renderCommentsFeed();
+        const total = document.getElementById('totalCommentsCount');
+        if (total) total.textContent = rawComments.length + ' comment' + (rawComments.length !== 1 ? 's' : '');
+    }, (err) => console.error('comments listener error', err));
+}
+
+async function seedCommentsToFirestore() {
+    const seed = [
+        { parentId: null, author: 'jackyZip2file-tech', avatar: 'https://github.com/jackyZip2file-tech.png', isOwner: true, text: "Welcome to Jacky's Library v9.0! Share your fixes, report broken links, or drop game requests below. Markdown supported (`code`, **bold**)!", timestamp: Date.now() - 86400000, isPinned: true, isEdited: false, upvotes: 42, downvotes: 0, reactions: { '👍': ['jackyZip2file-tech', 'Alex'], '🔥': ['jackyZip2file-tech'], '❤️': ['Mes3odi'] } },
+        { parentId: null, author: 'Mes3odi', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=Mes3odi', isOwner: false, text: 'Lethal Company online fix works smoothly! Make sure to copy the `.dll` files into the main directory.', timestamp: Date.now() - 36000000, isPinned: false, isEdited: false, upvotes: 18, downvotes: 1, reactions: { '🔥': ['jackyZip2file-tech', 'Sam'], '👍': ['Mes3odi'] } },
+        { parentId: 'c_seed_2', author: 'jackyZip2file-tech', avatar: 'https://github.com/jackyZip2file-tech.png', isOwner: true, text: 'Glad it helped dawg! Enjoy tinkering!', timestamp: Date.now() - 18000000, isPinned: false, isEdited: false, upvotes: 8, downvotes: 0, reactions: { '❤️': ['Mes3odi'] } }
+    ];
+    const ids = ['c_seed_1', 'c_seed_2', 'c_seed_3'];
+    for (let i = 0; i < seed.length; i++) {
+        const data = { ...seed[i] };
+        if (i === 2) data.parentId = 'c_seed_2';
+        await db.collection('comments').doc(ids[i]).set(data);
+    }
+}
+
+function getCommentsData() { return rawComments; }
+function saveCommentsData(list) { /* no-op: Firestore is source of truth */ }
+
 function init() {
+    initFirebase();
+    initCommentsFirestore();
     initTosModal();
     initOledToggle();
     initGalaxyBackground();
