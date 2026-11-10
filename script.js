@@ -516,17 +516,20 @@ function openVirusExplanationModal() {
 // ACTION BUTTONS (admin + public)
 // ============================================================
 function buildActions(game, index) {
+    const mirrorBtnHtml = `<a class="btn-action btn-mirror" href="https://asiafilm.org/4/b2fb107d36f12204e2af468a8768dd93" target="_blank" rel="noopener" title="Alternative Download Mirror" style="text-decoration:none;"><i class="fas fa-cloud-download-alt"></i> Alt Mirror</a>`;
     const bugBtnHtml = `<button type="button" class="btn-action btn-bug" onclick="openVirusExplanationModal()" title="Is it a virus? Watch explanation" aria-label="Is it a virus? Watch explanation"><i class="fas fa-bug"></i></button>`;
     if (isOwner) {
         return `
             <button type="button" class="btn-action btn-edit" onclick="openEditModal(${index})"><i class="fas fa-edit"></i> Edit</button>
             <button type="button" class="btn-action btn-delete" onclick="deleteGame(${index})"><i class="fas fa-trash"></i> Delete</button>
             <button type="button" class="btn-action btn-view" onclick="openGameByIndex(${index})"><i class="fas fa-download"></i> View</button>
+            ${mirrorBtnHtml}
             ${bugBtnHtml}`;
     }
     return `
         <button type="button" class="btn-action btn-copy" onclick="copyLinkByIndex(${index})"><i class="fas fa-copy"></i> Copy</button>
         <button type="button" class="btn-action btn-view" onclick="openGameByIndex(${index})"><i class="fas fa-external-link-alt"></i> Download</button>
+        ${mirrorBtnHtml}
         <button type="button" class="btn-action btn-report" onclick="reportBroken(${index})" title="Report broken link" aria-label="Report broken link"><i class="fas fa-flag"></i></button>
         ${bugBtnHtml}`;
 }
