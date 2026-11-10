@@ -32,6 +32,11 @@ function initFirebase() {
   auth = firebase.auth(app);
   db = firebase.firestore(app);
 
+  // Persist session in localStorage so it survives reloads (fixes Brave login loop)
+  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch((e) => {
+    console.warn('setPersistence failed', e);
+  });
+
   // Handle redirect sign-in result (avoids COOP popup blocking)
   auth.getRedirectResult().then((result) => {
     if (result && result.user) {
