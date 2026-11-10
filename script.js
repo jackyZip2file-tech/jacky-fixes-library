@@ -1089,6 +1089,7 @@ function saveProfile() {
             .catch(e => { if (err) { err.textContent = 'Failed: ' + e.message; err.classList.remove('hidden'); } });
     }
     localStorage.setItem(STORAGE_USER, JSON.stringify(currentCommentUser));
+    renderAuthUI();
     renderIdentityBar();
     applyCommentPermissions();
     renderCommentsFeed();
