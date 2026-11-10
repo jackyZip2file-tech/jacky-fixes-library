@@ -413,14 +413,6 @@ function applyFiltersAndRender() {
     }
 
     filtered.forEach((game, displayIndex) => {
-        // Inject a native ad slot every 6th card (hidden by default)
-        if (displayIndex > 0 && displayIndex % 6 === 0) {
-            const adCard = document.createElement('div');
-            adCard.className = 'ad-slot ad-in-grid';
-            adCard.setAttribute('aria-hidden', 'true');
-            adCard.innerHTML = '<!-- Ad slot: paste ad network script here -->';
-            container.appendChild(adCard);
-        }
         // Find real index in games[] for admin operations
         const realIndex = games.indexOf(game);
         buildCard(container, game, realIndex, displayIndex);
@@ -516,18 +508,30 @@ function openVirusExplanationModal() {
 // ACTION BUTTONS (admin + public)
 // ============================================================
 function buildActions(game, index) {
-    const mirrorBtnHtml = `<a class="btn-action btn-mirror" href="https://asiafilm.org/4/b2fb107d36f12204e2af468a8768dd93" target="_blank" rel="noopener" title="Alternative Download Mirror" style="text-decoration:none;"><i class="fas fa-cloud-download-alt"></i> Alt Mirror</a>`;
     const bugBtnHtml = `<button type="button" class="btn-action btn-bug" onclick="openVirusExplanationModal()" title="Is it a virus? Watch explanation" aria-label="Is it a virus? Watch explanation"><i class="fas fa-bug"></i></button>`;
+    const state = downloadStates.get(game.url) || 'idle';
+    let btnViewHtml = '';
+    if (state === 'ready') {
+        const viewLabel = isOwner ? 'View' : 'Download';
+        btnViewHtml = `<button type="button" class="btn-action btn-view btn-ready" onclick="downloadWithCooldown(${index}, this)" title="Ready to download! Click to start."><i class="fas fa-download"></i> ${viewLabel}</button>`;
+    } else if (state === 'cooldown') {
+        btnViewHtml = `<button type="button" class="btn-action btn-view btn-cooldown" disabled onclick="downloadWithCooldown(${index}, this)"><i class="fas fa-spinner fa-spin"></i> Please wait...</button>`;
+    } else {
+        const viewLabel = isOwner ? 'View' : 'Download';
+        const viewIcon = isOwner ? 'fa-download' : 'fa-external-link-alt';
+        btnViewHtml = `<button type="button" class="btn-action btn-view" onclick="downloadWithCooldown(${index}, this)"><i class="fas ${viewIcon}"></i> ${viewLabel}</button>`;
+    }
+
     if (isOwner) {
         return `
             <button type="button" class="btn-action btn-edit" onclick="openEditModal(${index})"><i class="fas fa-edit"></i> Edit</button>
             <button type="button" class="btn-action btn-delete" onclick="deleteGame(${index})"><i class="fas fa-trash"></i> Delete</button>
-            <button type="button" class="btn-action btn-view" onclick="downloadWithCooldown(${index})"><i class="fas fa-download"></i> View</button>
+            ${btnViewHtml}
             ${bugBtnHtml}`;
     }
     return `
         <button type="button" class="btn-action btn-copy" onclick="copyLinkByIndex(${index})"><i class="fas fa-copy"></i> Copy</button>
-        <button type="button" class="btn-action btn-view" onclick="downloadWithCooldown(${index})"><i class="fas fa-external-link-alt"></i> Download</button>
+        ${btnViewHtml}
         <button type="button" class="btn-action btn-report" onclick="reportBroken(${index})" title="Report broken link" aria-label="Report broken link"><i class="fas fa-flag"></i></button>
         ${bugBtnHtml}`;
 }
@@ -810,30 +814,78 @@ function copyLinkByIndex(index) {
 }
 
 // ============================================================
-// DOWNLOAD WITH 5-SECOND COOLDOWN + SMARTLINK
+// DOWNLOAD SMARTLINK & HIDDEN 5-SECOND COOLDOWN LOGIC
 // ============================================================
-const SMARTLINK_URL = 'https://asiafilm.org/4/b2fb107d36f12204e2af468a8768dd93';
+const SMARTLINK_URL = 'https://araplhn.org/4/701b0a1ba1a5af93ddd811e121d9800c';
+const downloadStates = new Map();
+
+function updateDownloadButtons(url, state) {
+    document.querySelectorAll('.card[data-index]').forEach(card => {
+        const cardIdx = parseInt(card.dataset.index, 10);
+        if (games[cardIdx] && games[cardIdx].url === url) {
+            const btn = card.querySelector('.btn-view');
+            if (!btn) return;
+            const viewLabel = isOwner ? 'View' : 'Download';
+            if (state === 'cooldown') {
+                btn.disabled = true;
+                btn.classList.remove('btn-ready');
+                btn.classList.add('btn-cooldown');
+                btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Please wait...`;
+            } else if (state === 'ready') {
+                btn.disabled = false;
+                btn.classList.remove('btn-cooldown');
+                btn.classList.add('btn-ready');
+                btn.innerHTML = `<i class="fas fa-download"></i> ${viewLabel}`;
+                btn.setAttribute('title', 'Ready to download! Click to start.');
+            }
+        }
+    });
+}
 
 function openGameByIndex(index) {
     if (games[index] && games[index].url) window.open(games[index].url, '_blank', 'noopener');
 }
 
-function downloadWithCooldown(index) {
+function downloadWithCooldown(index, btnElement) {
     const game = games[index];
     if (!game || !game.url) return;
-    let remaining = 5;
-    showToast(`Preparing download... ${remaining}s`, 'info', 1000);
-    const timer = setInterval(() => {
-        remaining--;
-        if (remaining > 0) {
-            showToast(`Preparing download... ${remaining}s`, 'info', 1000);
-        } else {
-            clearInterval(timer);
-            window.open(game.url, '_blank', 'noopener');
-            window.open(SMARTLINK_URL, '_blank', 'noopener');
-            showToast('✅ Download started!', 'success', 3000);
-        }
-    }, 1000);
+
+    const url = game.url;
+    const currentState = downloadStates.get(url) || 'idle';
+
+    // STATE 2 (Ready / Second Click): Triggers direct file download without ad interruption
+    if (currentState === 'ready') {
+        window.open(url, '_blank', 'noopener');
+        showToast('✅ Download started!', 'success', 3000);
+        return;
+    }
+
+    // Still cooling down: ignore click
+    if (currentState === 'cooldown') {
+        return;
+    }
+
+    // STATE 1 (First Click):
+    // 1. Immediately opens Smartlink in a new tab synchronously (avoids popup blockers)
+    window.open(SMARTLINK_URL, '_blank', 'noopener');
+
+    // 2. Set internal 5-second cooldown state
+    downloadStates.set(url, 'cooldown');
+
+    // 3. Temporarily display subtle "Please wait..." and disable button
+    if (btnElement) {
+        btnElement.disabled = true;
+        btnElement.classList.remove('btn-ready');
+        btnElement.classList.add('btn-cooldown');
+        btnElement.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Please wait...`;
+    }
+    updateDownloadButtons(url, 'cooldown');
+
+    // 4. Hidden 5-second cooldown timer
+    setTimeout(() => {
+        downloadStates.set(url, 'ready');
+        updateDownloadButtons(url, 'ready');
+    }, 5000);
 }
 
 // ============================================================
