@@ -31,6 +31,17 @@ function initFirebase() {
   catch (e) { try { app = firebase.app(); } catch (e2) { console.error('Firebase init failed', e2); return; } }
   auth = firebase.auth(app);
   db = firebase.firestore(app);
+
+  // Handle redirect sign-in result (avoids COOP popup blocking)
+  auth.getRedirectResult().then((result) => {
+    if (result && result.user) {
+      // signed in via redirect; onAuthStateChanged will handle the rest
+    }
+  }).catch((err) => {
+    console.error('Redirect sign-in error', err);
+    showToast('Sign-in failed: ' + (err && err.message ? err.message : err), 'error', 6000);
+  });
+
   auth.onAuthStateChanged(async (user) => {
     currentUser = user;
     if (user && user.email && user.email.toLowerCase() === 'anaflousoussama555@gmail.com') {
@@ -1639,7 +1650,7 @@ function submitNewComment() {
     db.collection('comments').add(newComment).then(() => {
         textarea.value = '';
         updateCharCounter();
-    }).catch(err => showToast('Failed: ' + err.message, 'error'));
+    }).catch(err => { if (isBlockedError(err)) showAdBlockBanner(); showToast('Failed: ' + err.message, 'error'); });
     showToast('🚀 Comment posted!', 'success');
 }
 
@@ -1800,7 +1811,7 @@ function renderAuthUI() {
 function signInGoogle() {
     if (!auth) return;
     const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(err => showToast(err.message, 'error'));
+    auth.signInWithRedirect(provider).catch(err => showToast(err.message, 'error'));
 }
 
 function signOutGoogle() {
@@ -1823,7 +1834,7 @@ function initCommentsFirestore() {
         renderCommentsFeed();
         const total = document.getElementById('totalCommentsCount');
         if (total) total.textContent = rawComments.length + ' comment' + (rawComments.length !== 1 ? 's' : '');
-    }, (err) => console.error('comments listener error', err));
+    }, (err) => { console.error('comments listener error', err); if (isBlockedError(err)) showAdBlockBanner(); });
 }
 
 async function seedCommentsToFirestore() {
@@ -1860,7 +1871,8 @@ function initGamesFirestore() {
         updateSeedButtonVisibility();
     }, (err) => {
         console.error('games listener error', err);
-        showToast('Could not load library (check Firestore rules): ' + (err && err.message ? err.message : err), 'error', 6000);
+        if (isBlockedError(err)) showAdBlockBanner();
+        showToast('Could not load library: ' + (err && err.message ? err.message : err), 'error', 6000);
     });
 }
 
@@ -1888,6 +1900,15 @@ function updateSeedButtonVisibility() {
     const seedBtn = document.getElementById('seedLibraryBtn');
     if (!seedBtn) return;
     seedBtn.classList.toggle('hidden', !(isOwner && games.length === 0));
+}
+
+function isBlockedError(err) {
+    const msg = (err && (err.message || err.code || String(err))) || '';
+    return /ERR_BLOCKED_BY_CLIENT|blocked by client|net::ERR/i.test(msg);
+}
+function showAdBlockBanner() {
+    const b = document.getElementById('adBlockBanner');
+    if (b) b.classList.remove('hidden');
 }
 
 function init() {

@@ -36,6 +36,10 @@
     </script>
 </head>
 <body>
+<div id="adBlockBanner" class="hidden" style="position:fixed;top:0;left:0;right:0;z-index:200;padding:10px 14px;background:#dc2626;color:#fff;font-size:13px;text-align:center;">
+  Firestore is blocked by your browser/ad-blocker. Please pause AdBlock/Brave Shields for this site and refresh.
+  <button onclick="document.getElementById('adBlockBanner').classList.add('hidden')" style="margin-left:10px;background:rgba(255,255,255,0.2);border:none;color:#fff;padding:2px 8px;border-radius:4px;cursor:pointer;">Dismiss</button>
+</div>
 
     <!-- ============================
          TOS MODAL (HIGH PRIORITY)
