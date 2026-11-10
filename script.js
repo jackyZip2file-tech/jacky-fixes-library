@@ -37,23 +37,9 @@ function initFirebase() {
     console.warn('setPersistence failed', e);
   });
 
-  // Handle redirect sign-in result (avoids COOP popup blocking)
-  auth.getRedirectResult().then((result) => {
-    if (result && result.user) {
-      // signed in via redirect; onAuthStateChanged will handle the rest
-    }
-  }).catch((err) => {
-    console.error('Redirect sign-in error', err);
-    showToast('Sign-in failed: ' + (err && err.message ? err.message : err), 'error', 6000);
-  });
-
   auth.onAuthStateChanged(async (user) => {
     currentUser = user;
-    if (user && user.email && user.email.toLowerCase() === 'anaflousoussama555@gmail.com') {
-      isOwner = true;
-    } else {
-      isOwner = (urlParams.get('admin') === 'jacky');
-    }
+    isOwner = !!(user && user.email && user.email.toLowerCase() === 'anaflousoussama555@gmail.com');
 
     // Load or create user profile (nickname + avatar) in Firestore
     if (user && db) {
@@ -1031,10 +1017,10 @@ function initCommentIdentity() {
         if (saved) {
             try { currentCommentUser = JSON.parse(saved); } catch (e) {}
         }
-        if (isOwner || (currentCommentUser.username || '').toLowerCase() === 'jackyzip2file-tech') {
-            currentCommentUser.username = 'jackyZip2file-tech';
+        if (isOwner) {
+            currentCommentUser.username = 'Owner';
             currentCommentUser.isOwner = true;
-            currentCommentUser.avatar = 'https://github.com/jackyZip2file-tech.png';
+            currentCommentUser.avatar = currentUser ? (currentUser.photoURL || currentCommentUser.avatar) : currentCommentUser.avatar;
         }
     }
     renderIdentityBar();
@@ -1089,7 +1075,7 @@ function saveProfile() {
     if (nickname.length < 2) { if (err) { err.textContent = 'Nickname must be at least 2 characters.'; err.classList.remove('hidden'); } return; }
     if (err) err.classList.add('hidden');
 
-    const isOwnerAccount = nickname.toLowerCase() === 'jackyzip2file-tech' || isOwner;
+    const isOwnerAccount = isOwner;
     currentCommentUser = {
         username: isOwnerAccount ? 'jackyZip2file-tech' : nickname,
         avatar: isOwnerAccount ? 'https://github.com/jackyZip2file-tech.png' : avatar,
@@ -1816,7 +1802,7 @@ function renderAuthUI() {
 function signInGoogle() {
     if (!auth) return;
     const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithRedirect(provider).catch(err => showToast(err.message, 'error'));
+    auth.signInWithPopup(provider).catch(err => showToast(err.message, 'error'));
 }
 
 function signOutGoogle() {
