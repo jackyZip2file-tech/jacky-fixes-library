@@ -265,6 +265,25 @@
     </div>
 
     <!-- ============================
+         PROFILE EDIT MODAL
+         ============================ -->
+    <div id="profileEditModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="profileEditTitle">
+        <div class="modal-content">
+            <h2 id="profileEditTitle"><i class="fas fa-user-edit"></i> Edit Profile</h2>
+            <p class="text-xs text-muted2" style="margin-bottom:10px;">Customize your display nickname and profile picture. Leave blank to use your Google account defaults.</p>
+            <label class="ban-label">Display Nickname</label>
+            <input type="text" id="profileNickInput" placeholder="Your nickname" aria-label="Nickname" maxlength="30">
+            <label class="ban-label">Profile Picture URL</label>
+            <input type="text" id="profilePfpInput" placeholder="https://..." aria-label="Profile picture URL">
+            <div class="modal-btns">
+                <button id="saveProfileBtn" class="btn-ban-confirm" onclick="saveProfile()">Save</button>
+                <button onclick="closeProfileEditModal()" class="btn-cancel">Cancel</button>
+            </div>
+            <p id="profileEditErr" class="text-red-400 text-xs hidden" style="margin-top:8px;"></p>
+        </div>
+    </div>
+
+    <!-- ============================
          ADMIN EDIT MODAL
          ============================ -->
     <div id="linkModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">

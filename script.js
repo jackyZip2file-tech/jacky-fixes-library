@@ -978,6 +978,8 @@ function initModalBackdropClose() {
     document.getElementById('linkModal').addEventListener('click', function(e) {
         if (e.target === this) toggleModal(false);
     });
+    const pem = document.getElementById('profileEditModal');
+    if (pem) pem.addEventListener('click', function(e) { if (e.target === this) closeProfileEditModal(); });
 }
 
 // ============================================================
@@ -1042,39 +1044,59 @@ function renderIdentityBar() {
     }
 }
 
-function changeCommentIdentity() {
-    const name = prompt('Enter your display nickname:', currentCommentUser.username);
-    if (!name || !name.trim()) return;
+function openProfileEditModal() {
+    if (!currentUser) return showToast('Sign in with Google to edit your profile.', 'warn');
+    const nickInput = document.getElementById('profileNickInput');
+    const pfpInput = document.getElementById('profilePfpInput');
+    if (nickInput) nickInput.value = (userProfile && userProfile.nickname) || currentCommentUser.username || '';
+    if (pfpInput) pfpInput.value = (userProfile && userProfile.avatar) || currentCommentUser.avatar || '';
+    const modal = document.getElementById('profileEditModal');
+    if (modal) { modal.style.display = 'flex'; requestAnimationFrame(() => modal.classList.add('open')); }
+}
 
-    const cleanName = name.trim();
-    const avatarInput = prompt('Profile picture URL (leave blank to keep current):', currentCommentUser.avatar || '');
-    const cleanAvatar = (avatarInput || '').trim() || currentCommentUser.avatar;
+function closeProfileEditModal() {
+    const modal = document.getElementById('profileEditModal');
+    if (!modal) return;
+    modal.classList.remove('open');
+    setTimeout(() => { if (!modal.classList.contains('open')) modal.style.display = 'none'; }, 280);
+}
 
-    const isOwnerAccount = cleanName.toLowerCase() === 'jackyzip2file-tech' || isOwner;
+function saveProfile() {
+    if (!currentUser) return showToast('Sign in with Google first.', 'warn');
+    const nickInput = document.getElementById('profileNickInput');
+    const pfpInput = document.getElementById('profilePfpInput');
+    const err = document.getElementById('profileEditErr');
 
+    const nickname = (nickInput ? nickInput.value.trim() : '') || (currentUser.displayName || currentUser.email.split('@')[0]);
+    const avatar = (pfpInput ? pfpInput.value.trim() : '') || currentUser.photoURL || currentCommentUser.avatar;
+
+    if (nickname.length < 2) { if (err) { err.textContent = 'Nickname must be at least 2 characters.'; err.classList.remove('hidden'); } return; }
+    if (err) err.classList.add('hidden');
+
+    const isOwnerAccount = nickname.toLowerCase() === 'jackyzip2file-tech' || isOwner;
     currentCommentUser = {
-        username: isOwnerAccount ? 'jackyZip2file-tech' : cleanName,
-        avatar: isOwnerAccount ? 'https://github.com/jackyZip2file-tech.png' : cleanAvatar,
+        username: isOwnerAccount ? 'jackyZip2file-tech' : nickname,
+        avatar: isOwnerAccount ? 'https://github.com/jackyZip2file-tech.png' : avatar,
         isOwner: isOwnerAccount
     };
+    userProfile = { uid: currentUser.uid, nickname: currentCommentUser.username, avatar: currentCommentUser.avatar, bio: (userProfile && userProfile.bio) || '' };
 
-    // Persist to Firestore if signed in
-    if (currentUser && db) {
-        db.collection('users').doc(currentUser.uid).set({
-            uid: currentUser.uid,
-            nickname: currentCommentUser.username,
-            avatar: currentCommentUser.avatar,
-            bio: (userProfile && userProfile.bio) || ''
-        }, { merge: true }).catch(err => console.warn('profile save failed', err));
-        userProfile = { uid: currentUser.uid, nickname: currentCommentUser.username, avatar: currentCommentUser.avatar, bio: (userProfile && userProfile.bio) || '' };
+    if (db) {
+        db.collection('users').doc(currentUser.uid).set(userProfile, { merge: true })
+            .then(() => showToast('Profile saved!', 'success'))
+            .catch(e => { if (err) { err.textContent = 'Failed: ' + e.message; err.classList.remove('hidden'); } });
     }
-
     localStorage.setItem(STORAGE_USER, JSON.stringify(currentCommentUser));
     renderIdentityBar();
     applyCommentPermissions();
     renderCommentsFeed();
-    showToast(isOwnerAccount ? '👑 Welcome back, Owner!' : `Profile updated: ${cleanName}`, 'success');
+    closeProfileEditModal();
 }
+
+function changeCommentIdentity() {
+    openProfileEditModal();
+}
+
 
 // 2. BAN ENGINE (Temporary & Permanent Bans)
 function getBans() {
@@ -1600,6 +1622,7 @@ function submitNewComment() {
 
     const newComment = {
         parentId: null,
+        uid: currentUser.uid,
         author: currentCommentUser.username,
         avatar: currentCommentUser.avatar,
         isOwner: isOwner,
@@ -1638,6 +1661,7 @@ function submitInlineReply(parentId) {
 
     const newReply = {
         parentId,
+        uid: currentUser.uid,
         author: currentCommentUser.username,
         avatar: currentCommentUser.avatar,
         isOwner: isOwner,
@@ -1760,11 +1784,12 @@ function renderAuthUI() {
         headerRight.insertBefore(authSlot, headerRight.firstChild);
     }
     if (currentUser) {
-        const name = currentUser.displayName || currentUser.email;
-        const photo = currentUser.photoURL || '';
+        const name = (userProfile && userProfile.nickname) || currentUser.displayName || currentUser.email.split('@')[0];
+        const photo = (userProfile && userProfile.avatar) || currentUser.photoURL || '';
         authSlot.innerHTML = `
             ${photo ? `<img src="${escapeHtml(photo)}" alt="" style="width:28px;height:28px;border-radius:50%;border:1px solid #2a3a5a;">` : ''}
             <span style="font-size:12px;color:#cbd5e1;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(name)}</span>
+            <button class="btn-icon-pill" onclick="openProfileEditModal()" title="Edit profile" aria-label="Edit profile"><i class="fas fa-user-edit"></i></button>
             <button class="btn-icon-pill" onclick="signOutGoogle()" title="Sign out" aria-label="Sign out"><i class="fas fa-sign-out-alt"></i></button>
         `;
     } else {
