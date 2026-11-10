@@ -14,20 +14,22 @@ let db = null;
 
 // Firebase configuration (provided by owner)
 const firebaseConfig = {
-  apiKey: "AIzaSyA3iDLa-mREB-L3Z_l2KERYNaznv2uBw6E",
+  apiKey: "AIzaSyA3iDLa-mRE0-L3Z_l2KERYNaznv2u8w6E",
   authDomain: "jackyfixes.firebaseapp.com",
   projectId: "jackyfixes",
   storageBucket: "jackyfixes.firebasestorage.app",
-  messagingSenderId: "71526165841",
-  appId: "1:71526165841:web:143caa18eb8b4eeb24df90",
+  messagingSenderId: "715261265841",
+  appId: "1:715261265841:web:143caa18eb8b4eeb24df90",
   measurementId: "G-KEWYEWV55J"
 };
 
 function initFirebase() {
   if (typeof firebase === 'undefined') { console.warn('Firebase SDK not loaded'); return; }
-  const app = firebase.initializeApp(firebaseConfig);
-  auth = firebase.auth();
-  db = firebase.firestore();
+  let app;
+  try { app = firebase.initializeApp(firebaseConfig); }
+  catch (e) { try { app = firebase.app(); } catch (e2) { console.error('Firebase init failed', e2); return; } }
+  auth = firebase.auth(app);
+  db = firebase.firestore(app);
   auth.onAuthStateChanged(async (user) => {
     currentUser = user;
     if (user && user.email && user.email.toLowerCase() === 'anaflousoussama555@gmail.com') {

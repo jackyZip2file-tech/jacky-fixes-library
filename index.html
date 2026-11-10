@@ -18,6 +18,22 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <!-- Firebase CDN (exact block provided by owner) -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-app.js";
+      import { getAnalytics } from "https://www.gstatic.com/firebasejs/13.2.0/firebase-analytics.js";
+      const firebaseConfig = {
+        apiKey: "AIzaSyA3iDLa-mRE0-L3Z_l2KERYNaznv2u8w6E",
+        authDomain: "jackyfixes.firebaseapp.com",
+        projectId: "jackyfixes",
+        storageBucket: "jackyfixes.firebasestorage.app",
+        messagingSenderId: "715261265841",
+        appId: "1:715261265841:web:143caa18eb8b4eeb24df90",
+        measurementId: "G-KEWYEWV55J"
+      };
+      const app = initializeApp(firebaseConfig);
+      const analytics = getAnalytics(app);
+    </script>
 </head>
 <body>
 
