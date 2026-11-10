@@ -71,6 +71,7 @@ function initFirebase() {
 
     // Re-render so admin controls appear/disappear instantly
     try { applyFiltersAndRender(); } catch (e) {}
+    updateSeedButtonVisibility();
     renderCommentsFeed();
   });
 }
@@ -403,7 +404,7 @@ function applyFiltersAndRender() {
         container.innerHTML += `
             <div class="library-empty">
                 <i class="fas fa-rocket"></i>
-                <p>No results found.${isOwner ? ' Use <strong>+ New Link</strong>, then Export.' : ''}</p>
+                <p>${games.length === 0 ? (isOwner ? 'Library is empty. Click <strong>Seed Library</strong> to load the default games, or use <strong>+ New Link</strong>.' : 'No games posted yet. Check back soon!') : 'No results found.'}</p>
             </div>`;
         updateSiteMeta();
         return;
@@ -1831,25 +1832,37 @@ function initGamesFirestore() {
             return;
         }
         applyFiltersAndRender();
-    }, (err) => console.error('games listener error', err));
+        updateSeedButtonVisibility();
+    }, (err) => {
+        console.error('games listener error', err);
+        showToast('Could not load library (check Firestore rules): ' + (err && err.message ? err.message : err), 'error', 6000);
+    });
 }
 
 async function seedGamesToFirestore() {
     if (!db || !isOwner) return;
+    const seedBtn = document.getElementById('seedLibraryBtn');
+    if (seedBtn) { seedBtn.disabled = true; seedBtn.textContent = 'Seeding...'; }
     try {
-        const batch = db.batch ? db.batch() : null;
         for (let i = 0; i < officialGames.length; i++) {
             const g = officialGames[i];
             const data = { title: g.title, url: g.url, yt: g.yt || '', img: g.img || '', category: g.category || 'auto', createdAt: Date.now() - (officialGames.length - i) };
-            if (batch) {
-                const ref = db.collection('games').doc();
-                batch.set(ref, data);
-            } else {
-                await db.collection('games').add(data);
-            }
+            await db.collection('games').add(data);
         }
-        if (batch) await batch.commit();
-    } catch (e) { console.error('seed failed', e); }
+        showToast('Library seeded with ' + officialGames.length + ' items!', 'success', 4000);
+    } catch (e) {
+        console.error('seed failed', e);
+        showToast('Seed failed: ' + (e && e.message ? e.message : e), 'error', 6000);
+    } finally {
+        if (seedBtn) { seedBtn.disabled = false; seedBtn.textContent = 'Seed Library'; }
+        updateSeedButtonVisibility();
+    }
+}
+
+function updateSeedButtonVisibility() {
+    const seedBtn = document.getElementById('seedLibraryBtn');
+    if (!seedBtn) return;
+    seedBtn.classList.toggle('hidden', !(isOwner && games.length === 0));
 }
 
 function init() {
