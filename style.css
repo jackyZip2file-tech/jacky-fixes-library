@@ -2434,20 +2434,16 @@ body.oled-mode #oledToggleBtn {
     display: none !important;
 }
 
-/* Top Banner ad wrapper */
-#adTopBanner {
-    width: 728px;
-    height: 90px;
-    max-width: 100%;
-    margin: 20px auto;
+/* In-grid native ad row */
+.ad-native-row {
+    grid-column: 1 / -1;
+    width: 100%;
+    padding: 8px 0;
     display: flex;
     justify-content: center;
     align-items: center;
+    min-height: 0;
     overflow: hidden;
-}
-
-#adTopBanner iframe {
-    max-width: 100% !important;
 }
 
 /* Download Cooldown & Ready States */

@@ -413,6 +413,17 @@ function applyFiltersAndRender() {
     }
 
     filtered.forEach((game, displayIndex) => {
+        // Inject native ad as a full-width row after the 6th card
+        if (displayIndex === 6) {
+            const adRow = document.createElement('div');
+            adRow.className = 'ad-native-row';
+            adRow.setAttribute('aria-hidden', 'true');
+            adRow.innerHTML = `
+                <script async="async" data-cfasync="false" src="https://bauval.org/21/786db4fad312e6c51e1475aa7ecd1aca"><\/script>
+                <div id="container-786db4fad312e6c51e1475aa7ecd1aca"></div>
+            `;
+            container.appendChild(adRow);
+        }
         // Find real index in games[] for admin operations
         const realIndex = games.indexOf(game);
         buildCard(container, game, realIndex, displayIndex);
