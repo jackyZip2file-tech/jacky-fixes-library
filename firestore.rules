@@ -1,0 +1,45 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() { return request.auth != null; }
+    function isOwner() {
+      return isSignedIn() && request.auth.token.email.lower() == "anaflousoussama555@gmail.com";
+    }
+
+    // Users (nickname, avatar, bio) — owner of the doc or site owner
+    match /users/{uid} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == uid;
+      allow update: if isSignedIn() && (request.auth.uid == uid || isOwner());
+      allow delete: if isOwner();
+    }
+
+    // Games library: public read, owner-only write
+    match /games/{gid} {
+      allow read: if true;
+      allow create, update, delete: if isOwner();
+    }
+
+    // Comments: public read, authenticated create, author/owner update/delete
+    match /comments/{cid} {
+      allow read: if true;
+      allow create: if isSignedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 500;
+      allow update: if isSignedIn() && (
+        isOwner() ||
+        (resource.data.uid == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'isEdited', 'upvotes', 'downvotes', 'reactions', 'isPinned']))
+      );
+      allow delete: if isOwner() || (isSignedIn() && resource.data.uid == request.auth.uid);
+    }
+
+    // Reports: owner-only read/moderation, authenticated create
+    match /reports/{rid} {
+      allow read: if isOwner();
+      allow create: if isSignedIn() && request.resource.data.reporterUid == request.auth.uid;
+      allow update, delete: if isOwner();
+    }
+  }
+}

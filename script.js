@@ -9,6 +9,7 @@ const urlParams = new URLSearchParams(window.location.search);
 // Admin is now tied strictly to the owner's Gmail (Firebase Auth). `?admin=jacky` kept as a legacy fallback toggle.
 let isOwner = false;
 let currentUser = null;
+let userProfile = null;
 let auth = null;
 let db = null;
 
@@ -37,31 +38,47 @@ function initFirebase() {
     } else {
       isOwner = (urlParams.get('admin') === 'jacky');
     }
+
+    // Load or create user profile (nickname + avatar) in Firestore
+    if (user && db) {
+      try {
+        const snap = await db.collection('users').doc(user.uid).get();
+        if (snap.exists) {
+          userProfile = snap.data();
+        } else {
+          userProfile = { uid: user.uid, nickname: user.displayName || user.email.split('@')[0], avatar: user.photoURL || '', bio: '' };
+          await db.collection('users').doc(user.uid).set(userProfile);
+        }
+      } catch (e) { console.warn('profile load failed', e); }
+    } else {
+      userProfile = null;
+    }
+
     renderAuthUI();
     initCommentIdentity();
     applyCommentPermissions();
+    const adminBtn = document.getElementById('adminBtn');
     if (isOwner) {
-      const adminBtn = document.getElementById('adminBtn');
       if (adminBtn) adminBtn.classList.remove('hidden');
-      const headerRight = document.querySelector('.header-right');
-      if (headerRight && !document.getElementById('exportBtn')) {
-        const exportBtn = document.createElement('button');
-        exportBtn.id = 'exportBtn';
-        exportBtn.innerText = 'Export officialGames';
-        exportBtn.className = 'btn-create btn-export';
-        exportBtn.onclick = exportData;
-        headerRight.prepend(exportBtn);
-      }
+    } else {
+      if (adminBtn) adminBtn.classList.add('hidden');
+      const eb = document.getElementById('exportBtn');
+      if (eb) eb.remove();
     }
-    // reload comments from Firestore if available
-    if (typeof loadCommentsFromFirestore === 'function') loadCommentsFromFirestore();
+    // reload games & comments from Firestore (seed if empty + owner)
+    initGamesFirestore();
+    initCommentsFirestore();
+
+    // Re-render so admin controls appear/disappear instantly
+    try { applyFiltersAndRender(); } catch (e) {}
+    renderCommentsFeed();
   });
 }
 
-// --- 2. THE DATA lives in officialGames inside index.html ---
-let games = JSON.parse(JSON.stringify(officialGames));
-// Keep a copy of the original order for "default" sorting
-const originalGames = JSON.parse(JSON.stringify(officialGames));
+// --- 2. THE DATA lives in Firestore `games` collection (real-time) ---
+// `officialGames` (defined in index.html) is kept as a seed/fallback source only.
+let games = [];
+let gamesUnsub = null;
 
 let editIndex = null;
 let ownerHasUnsavedEdits = false;
@@ -846,12 +863,17 @@ function publishGame() {
         gameData.category = category;
     }
 
-    if (editIndex !== null) { games[editIndex] = gameData; }
-    else { games.push(gameData); }
-
-    ownerHasUnsavedEdits = true;
-    applyFiltersAndRender();
-    toggleModal(false);
+    if (!db) { showToast('Database not ready.', 'error'); return; }
+    if (editIndex !== null && games[editIndex] && games[editIndex].id) {
+        db.collection('games').doc(games[editIndex].id).update(gameData)
+            .then(() => { toggleModal(false); showToast('✅ Updated!', 'success'); })
+            .catch(err => showToast('Failed: ' + err.message, 'error'));
+    } else {
+        gameData.createdAt = Date.now();
+        db.collection('games').add(gameData)
+            .then(() => { toggleModal(false); showToast('✅ Published!', 'success'); })
+            .catch(err => showToast('Failed: ' + err.message, 'error'));
+    }
 
     if (isOwner) {
         showToast('✅ Saved (preview only) — Export to push live!', 'success', 5000);
@@ -862,11 +884,13 @@ function publishGame() {
 // ADMIN: DELETE GAME
 // ============================================================
 function deleteGame(index) {
-    if (confirm('Delete this game?')) {
-        games.splice(index, 1);
-        ownerHasUnsavedEdits = true;
-        applyFiltersAndRender();
-    }
+    const game = games[index];
+    if (!game || !game.id) return;
+    if (!confirm('Delete this game?')) return;
+    if (!db) return showToast('Database not ready.', 'error');
+    db.collection('games').doc(game.id).delete()
+        .then(() => showToast('🗑️ Deleted', 'info'))
+        .catch(err => showToast('Failed: ' + err.message, 'error'));
 }
 
 // ============================================================
@@ -979,8 +1003,8 @@ const STORAGE_BANS = 'jacky_bans_v2';
 function initCommentIdentity() {
     if (currentUser) {
         currentCommentUser = {
-            username: currentUser.displayName || currentUser.email.split('@')[0],
-            avatar: currentUser.photoURL || 'https://api.dicebear.com/7.x/bottts/svg?seed=' + encodeURIComponent(currentUser.email),
+            username: (userProfile && userProfile.nickname) || currentUser.displayName || currentUser.email.split('@')[0],
+            avatar: (userProfile && userProfile.avatar) || currentUser.photoURL || 'https://api.dicebear.com/7.x/bottts/svg?seed=' + encodeURIComponent(currentUser.email),
             isOwner: isOwner
         };
     } else {
@@ -1018,23 +1042,37 @@ function renderIdentityBar() {
 }
 
 function changeCommentIdentity() {
-    const name = prompt('Enter your display name / GitHub username:', currentCommentUser.username);
+    const name = prompt('Enter your display nickname:', currentCommentUser.username);
     if (!name || !name.trim()) return;
 
     const cleanName = name.trim();
+    const avatarInput = prompt('Profile picture URL (leave blank to keep current):', currentCommentUser.avatar || '');
+    const cleanAvatar = (avatarInput || '').trim() || currentCommentUser.avatar;
+
     const isOwnerAccount = cleanName.toLowerCase() === 'jackyzip2file-tech' || isOwner;
 
     currentCommentUser = {
         username: isOwnerAccount ? 'jackyZip2file-tech' : cleanName,
-        avatar: isOwnerAccount ? 'https://github.com/jackyZip2file-tech.png' : `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(cleanName)}`,
+        avatar: isOwnerAccount ? 'https://github.com/jackyZip2file-tech.png' : cleanAvatar,
         isOwner: isOwnerAccount
     };
+
+    // Persist to Firestore if signed in
+    if (currentUser && db) {
+        db.collection('users').doc(currentUser.uid).set({
+            uid: currentUser.uid,
+            nickname: currentCommentUser.username,
+            avatar: currentCommentUser.avatar,
+            bio: (userProfile && userProfile.bio) || ''
+        }, { merge: true }).catch(err => console.warn('profile save failed', err));
+        userProfile = { uid: currentUser.uid, nickname: currentCommentUser.username, avatar: currentCommentUser.avatar, bio: (userProfile && userProfile.bio) || '' };
+    }
 
     localStorage.setItem(STORAGE_USER, JSON.stringify(currentCommentUser));
     renderIdentityBar();
     applyCommentPermissions();
     renderCommentsFeed();
-    showToast(isOwnerAccount ? '👑 Welcome back, Owner!' : `Logged in as ${cleanName}`, 'success');
+    showToast(isOwnerAccount ? '👑 Welcome back, Owner!' : `Profile updated: ${cleanName}`, 'success');
 }
 
 // 2. BAN ENGINE (Temporary & Permanent Bans)
@@ -1561,8 +1599,8 @@ function submitNewComment() {
 
     const newComment = {
         parentId: null,
-        author: currentUser.displayName || currentUser.email.split('@')[0],
-        avatar: currentUser.photoURL || currentCommentUser.avatar,
+        author: currentCommentUser.username,
+        avatar: currentCommentUser.avatar,
         isOwner: isOwner,
         text,
         timestamp: Date.now(),
@@ -1599,8 +1637,8 @@ function submitInlineReply(parentId) {
 
     const newReply = {
         parentId,
-        author: currentUser.displayName || currentUser.email.split('@')[0],
-        avatar: currentUser.photoURL || currentCommentUser.avatar,
+        author: currentCommentUser.username,
+        avatar: currentCommentUser.avatar,
         isOwner: isOwner,
         text,
         timestamp: Date.now(),
@@ -1779,8 +1817,44 @@ async function seedCommentsToFirestore() {
 function getCommentsData() { return rawComments; }
 function saveCommentsData(list) { /* no-op: Firestore is source of truth */ }
 
+// ============================================================
+// FIRESTORE GAMES (real-time, dynamic library)
+// ============================================================
+function initGamesFirestore() {
+    if (!db) return;
+    if (gamesUnsub) gamesUnsub();
+    gamesUnsub = db.collection('games').orderBy('createdAt', 'asc').onSnapshot((snap) => {
+        games = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // seed once if empty and owner is signed in
+        if (games.length === 0 && isOwner && typeof officialGames !== 'undefined' && officialGames.length) {
+            seedGamesToFirestore();
+            return;
+        }
+        applyFiltersAndRender();
+    }, (err) => console.error('games listener error', err));
+}
+
+async function seedGamesToFirestore() {
+    if (!db || !isOwner) return;
+    try {
+        const batch = db.batch ? db.batch() : null;
+        for (let i = 0; i < officialGames.length; i++) {
+            const g = officialGames[i];
+            const data = { title: g.title, url: g.url, yt: g.yt || '', img: g.img || '', category: g.category || 'auto', createdAt: Date.now() - (officialGames.length - i) };
+            if (batch) {
+                const ref = db.collection('games').doc();
+                batch.set(ref, data);
+            } else {
+                await db.collection('games').add(data);
+            }
+        }
+        if (batch) await batch.commit();
+    } catch (e) { console.error('seed failed', e); }
+}
+
 function init() {
     initFirebase();
+    initGamesFirestore();
     initCommentsFirestore();
     initTosModal();
     initOledToggle();
