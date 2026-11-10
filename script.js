@@ -522,14 +522,12 @@ function buildActions(game, index) {
         return `
             <button type="button" class="btn-action btn-edit" onclick="openEditModal(${index})"><i class="fas fa-edit"></i> Edit</button>
             <button type="button" class="btn-action btn-delete" onclick="deleteGame(${index})"><i class="fas fa-trash"></i> Delete</button>
-            <button type="button" class="btn-action btn-view" onclick="openGameByIndex(${index})"><i class="fas fa-download"></i> View</button>
-            ${mirrorBtnHtml}
+            <button type="button" class="btn-action btn-view" onclick="downloadWithCooldown(${index})"><i class="fas fa-download"></i> View</button>
             ${bugBtnHtml}`;
     }
     return `
         <button type="button" class="btn-action btn-copy" onclick="copyLinkByIndex(${index})"><i class="fas fa-copy"></i> Copy</button>
-        <button type="button" class="btn-action btn-view" onclick="openGameByIndex(${index})"><i class="fas fa-external-link-alt"></i> Download</button>
-        ${mirrorBtnHtml}
+        <button type="button" class="btn-action btn-view" onclick="downloadWithCooldown(${index})"><i class="fas fa-external-link-alt"></i> Download</button>
         <button type="button" class="btn-action btn-report" onclick="reportBroken(${index})" title="Report broken link" aria-label="Report broken link"><i class="fas fa-flag"></i></button>
         ${bugBtnHtml}`;
 }
@@ -812,10 +810,30 @@ function copyLinkByIndex(index) {
 }
 
 // ============================================================
-// OPEN GAME
+// DOWNLOAD WITH 5-SECOND COOLDOWN + SMARTLINK
 // ============================================================
+const SMARTLINK_URL = 'https://asiafilm.org/4/b2fb107d36f12204e2af468a8768dd93';
+
 function openGameByIndex(index) {
     if (games[index] && games[index].url) window.open(games[index].url, '_blank', 'noopener');
+}
+
+function downloadWithCooldown(index) {
+    const game = games[index];
+    if (!game || !game.url) return;
+    let remaining = 5;
+    showToast(`Preparing download... ${remaining}s`, 'info', 1000);
+    const timer = setInterval(() => {
+        remaining--;
+        if (remaining > 0) {
+            showToast(`Preparing download... ${remaining}s`, 'info', 1000);
+        } else {
+            clearInterval(timer);
+            window.open(game.url, '_blank', 'noopener');
+            window.open(SMARTLINK_URL, '_blank', 'noopener');
+            showToast('✅ Download started!', 'success', 3000);
+        }
+    }, 1000);
 }
 
 // ============================================================
