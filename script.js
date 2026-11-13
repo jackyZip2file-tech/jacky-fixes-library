@@ -541,7 +541,6 @@ function buildActions(game, index) {
             ${bugBtnHtml}`;
     }
     return `
-        <button type="button" class="btn-action btn-copy" onclick="copyLinkByIndex(${index})"><i class="fas fa-copy"></i> Copy</button>
         ${btnViewHtml}
         <button type="button" class="btn-action btn-report" onclick="reportBroken(${index})" title="Report broken link" aria-label="Report broken link"><i class="fas fa-flag"></i></button>
         ${bugBtnHtml}`;
