@@ -130,6 +130,9 @@
             <button class="filter-tag" data-filter="tools" role="tab" aria-selected="false" onclick="setFilter('tools')">
                 <i class="fas fa-wrench"></i> Tools & Fixes
             </button>
+            <button class="filter-tag" data-filter="sites" role="tab" aria-selected="false" onclick="setFilter('sites')">
+                <i class="fas fa-globe"></i> Sites
+            </button>
         </div>
 
         <div class="controls-right">
@@ -292,11 +295,12 @@
             <input type="text" id="newFileUrl" placeholder="Download Link" aria-label="Download Link">
             <input type="text" id="newYtUrl" placeholder="YouTube Preview Link" aria-label="YouTube Preview Link">
             <input type="text" id="newImgUrl" placeholder="Thumbnail Image URL" aria-label="Thumbnail URL">
-            <select id="newCategory" class="admin-category-select" aria-label="Category">
+            <select id="newCategory" class="admin-category-select" aria-label="Category" onchange="updateUrlPlaceholder(this.value)">
                 <option value="auto">🔄 Auto-detect from title</option>
                 <option value="singleplayer">🎮 Singleplayer</option>
                 <option value="online">🌐 Multiplayer / Online</option>
                 <option value="tools">🔧 Tools &amp; Fixes</option>
+                <option value="sites">🔗 Sites &amp; Links</option>
             </select>
             <div class="modal-btns">
                 <button id="publishBtn" onclick="publishGame()">Publish</button>

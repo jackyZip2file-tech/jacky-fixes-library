@@ -519,10 +519,14 @@ function openVirusExplanationModal() {
 // ACTION BUTTONS (admin + public)
 // ============================================================
 function buildActions(game, index) {
-    const bugBtnHtml = `<button type="button" class="btn-action btn-bug" onclick="openVirusExplanationModal()" title="Is it a virus? Watch explanation" aria-label="Is it a virus? Watch explanation"><i class="fas fa-bug"></i></button>`;
+    const isSite = getGameCategory(game) === 'sites';
+    const bugBtnHtml = isSite ? '' : `<button type="button" class="btn-action btn-bug" onclick="openVirusExplanationModal()" title="Is it a virus? Watch explanation" aria-label="Is it a virus? Watch explanation"><i class="fas fa-bug"></i></button>`;
+    const reportBtnHtml = `<button type="button" class="btn-action btn-report" onclick="reportBroken(${index})" title="Report broken link" aria-label="Report broken link"><i class="fas fa-flag"></i></button>`;
     const state = downloadStates.get(game.url) || 'idle';
     let btnViewHtml = '';
-    if (state === 'ready') {
+    if (isSite) {
+        btnViewHtml = `<a class="btn-action btn-view" href="${escapeHtml(game.url)}" target="_blank" rel="noopener" title="Visit Site"><i class="fas fa-globe"></i> Visit Site</a>`;
+    } else if (state === 'ready') {
         const viewLabel = isOwner ? 'View' : 'Download';
         btnViewHtml = `<button type="button" class="btn-action btn-view btn-ready" onclick="downloadWithCooldown(${index}, this)" title="Ready to download! Click to start."><i class="fas fa-download"></i> ${viewLabel}</button>`;
     } else if (state === 'cooldown') {
@@ -542,7 +546,7 @@ function buildActions(game, index) {
     }
     return `
         ${btnViewHtml}
-        <button type="button" class="btn-action btn-report" onclick="reportBroken(${index})" title="Report broken link" aria-label="Report broken link"><i class="fas fa-flag"></i></button>
+        ${reportBtnHtml}
         ${bugBtnHtml}`;
 }
 
@@ -925,7 +929,19 @@ function openEditModal(index = null) {
         modalTitle.innerText = 'Publish New Game';
         publishBtn.innerText = 'Publish';
     }
+    updateUrlPlaceholder(catSelect ? catSelect.value : 'auto');
     toggleModal(true);
+}
+
+// ============================================================
+// ADMIN: URL FIELD HINT (download link vs site URL)
+// ============================================================
+function updateUrlPlaceholder(category) {
+    const input = document.getElementById('newFileUrl');
+    if (!input) return;
+    input.placeholder = category === 'sites'
+        ? 'Enter Site URL (https://example.com)'
+        : 'Download Link';
 }
 
 // ============================================================
